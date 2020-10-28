@@ -71,7 +71,6 @@
 #include <uORB/topics/vehicle_rates_setpoint.h>
 #include <uORB/topics/vehicle_control_mode.h>
 #include <uORB/topics/actuator_controls.h>
-#include <uORB/topics/ekf2_timestamps.h>
 #include <uORB/uORB.h>
 
 using matrix::Eulerf;
@@ -94,9 +93,6 @@ public:
 
 	/** @see ModuleBase */
 	static int task_spawn(int argc, char *argv[]);
-
-	/** @see ModuleBase */
-	static UUVAttitudeControl *instantiate(int argc, char *argv[]);
 
 	static int custom_command(int argc, char *argv[]);
 

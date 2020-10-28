@@ -38,6 +38,7 @@
  */
 
 #include <px4_platform_common/px4_config.h>
+#include "factory_calibration_storage.h"
 #include "gyro_calibration.h"
 #include "calibration_messages.h"
 #include "calibration_routines.h"
@@ -59,7 +60,7 @@
 #include <uORB/topics/sensor_gyro.h>
 
 static constexpr char sensor_name[] {"gyro"};
-static constexpr unsigned MAX_GYROS = 3;
+static constexpr unsigned MAX_GYROS = 4;
 
 using matrix::Vector3f;
 
@@ -101,6 +102,7 @@ static calibrate_return gyro_calibration_worker(gyro_worker_data_t &worker_data)
 		{ORB_ID(sensor_gyro), 0, 0},
 		{ORB_ID(sensor_gyro), 0, 1},
 		{ORB_ID(sensor_gyro), 0, 2},
+		{ORB_ID(sensor_gyro), 0, 3},
 	};
 
 	memset(&worker_data.last_sample_0_x, 0, sizeof(worker_data.last_sample_0_x));
@@ -147,6 +149,9 @@ static calibrate_return gyro_calibration_worker(gyro_worker_data_t &worker_data)
 										break;
 									case 2:
 										offset = Vector3f{sensor_correction.gyro_offset_2};
+										break;
+									case 3:
+										offset = Vector3f{sensor_correction.gyro_offset_3};
 										break;
 									}
 								}
@@ -285,10 +290,17 @@ int do_gyro_calibration(orb_advert_t *mavlink_log_pub)
 		res = PX4_ERROR;
 	}
 
-	if (res == PX4_OK) {
+	FactoryCalibrationStorage factory_storage;
 
-		/* set offset parameters to new values */
-		bool failed = false;
+	if (factory_storage.open() != PX4_OK) {
+		calibration_log_critical(mavlink_log_pub, "ERROR: cannot open calibration storage");
+		res = PX4_ERROR;
+	}
+
+	if (res == PX4_OK) {
+		// set offset parameters to new values
+		bool param_save = false;
+		bool failed = true;
 
 		for (unsigned uorb_index = 0; uorb_index < MAX_GYROS; uorb_index++) {
 
@@ -304,29 +316,35 @@ int do_gyro_calibration(orb_advert_t *mavlink_log_pub)
 			}
 
 			calibration.set_calibration_index(uorb_index);
-			calibration.ParametersSave();
+
+			if (calibration.ParametersSave()) {
+				param_save = true;
+				failed = false;
+
+			} else {
+				failed = true;
+				calibration_log_critical(mavlink_log_pub, "calibration save failed");
+				break;
+			}
 		}
 
-		if (failed) {
-			calibration_log_critical(mavlink_log_pub, "ERROR: failed to set offset params");
-			res = PX4_ERROR;
+		if (!failed && factory_storage.store() != PX4_OK) {
+			failed = true;
+		}
+
+		if (param_save) {
+			param_notify_changes();
+		}
+
+		if (!failed) {
+			calibration_log_info(mavlink_log_pub, CAL_QGC_DONE_MSG, sensor_name);
+			px4_usleep(600000); // give this message enough time to propagate
+			return PX4_OK;
 		}
 	}
 
-	param_notify_changes();
+	calibration_log_critical(mavlink_log_pub, CAL_QGC_FAILED_MSG, sensor_name);
+	px4_usleep(600000); // give this message enough time to propagate
 
-	/* if there is a any preflight-check system response, let the barrage of messages through */
-	px4_usleep(200000);
-
-	if (res == PX4_OK) {
-		calibration_log_info(mavlink_log_pub, CAL_QGC_DONE_MSG, sensor_name);
-
-	} else {
-		calibration_log_info(mavlink_log_pub, CAL_QGC_FAILED_MSG, sensor_name);
-	}
-
-	/* give this message enough time to propagate */
-	px4_usleep(600000);
-
-	return res;
+	return PX4_ERROR;
 }

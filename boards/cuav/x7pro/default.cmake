@@ -10,7 +10,7 @@ px4_add_board(
 	BUILD_BOOTLOADER
 	TESTING
 	UAVCAN_INTERFACES 2
-	UAVCAN_TIMER_OVERRIDE	  2
+	UAVCAN_TIMER_OVERRIDE 2
 	SERIAL_PORTS
 		GPS1:/dev/ttyS0
 		TEL1:/dev/ttyS1
@@ -19,7 +19,7 @@ px4_add_board(
 		# CONSOLE: /dev/ttyS4
 		# RC: /dev/ttyS5
 	DRIVERS
-		adc
+		adc/board_adc
 		barometer # all available barometer drivers
 		batt_smbus
 		camera_capture
@@ -106,6 +106,7 @@ px4_add_board(
 		reboot
 		reflect
 		sd_bench
+		system_time
 		tests # tests and test runner
 		top
 		topic_listener

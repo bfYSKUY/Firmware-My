@@ -61,6 +61,7 @@
 #include <uORB/topics/parameter_update.h>
 #include <uORB/topics/position_controller_status.h>
 #include <uORB/topics/position_setpoint_triplet.h>
+#include <uORB/topics/sensor_combined.h>
 #include <uORB/topics/vehicle_acceleration.h>
 #include <uORB/topics/vehicle_attitude.h>
 #include <uORB/topics/vehicle_attitude_setpoint.h>
@@ -68,7 +69,6 @@
 #include <uORB/topics/vehicle_global_position.h>
 #include <uORB/topics/vehicle_local_position.h>
 #include <uORB/topics/actuator_controls.h>
-#include <uORB/topics/ekf2_timestamps.h>
 #include <uORB/uORB.h>
 
 using matrix::Dcmf;
@@ -109,6 +109,7 @@ private:
 	int		_pos_sp_triplet_sub{-1};
 	int		_att_sp_sub{-1};
 	int		_vehicle_attitude_sub{-1};
+	int		_sensor_combined_sub{-1};
 
 	uORB::Subscription	_parameter_update_sub{ORB_ID(parameter_update)};
 
@@ -120,6 +121,7 @@ private:
 	vehicle_local_position_s		_local_pos{};			/**< global vehicle position */
 	actuator_controls_s				_act_controls{};		/**< direct control of actuators */
 	vehicle_attitude_s				_vehicle_att{};
+	sensor_combined_s				_sensor_combined{};
 
 	SubscriptionData<vehicle_acceleration_s>		_vehicle_acceleration_sub{ORB_ID(vehicle_acceleration)};
 

@@ -13,7 +13,7 @@ px4_add_board(
 #		TEL2:/dev/ttyS2
 #		TEL4:/dev/ttyS3
 	DRIVERS
-		adc
+		adc/board_adc
 		barometer # all available barometer drivers
 		#batt_smbus
 		camera_capture
@@ -29,7 +29,7 @@ px4_add_board(
 		#imu/adis16497
 		#imu/bmi088
 		imu/mpu6000
-		#imu/invensense/icm20602
+		imu/invensense/icm20602
 		#imu/mpu9250
 		#irlock
 		lights/blinkm

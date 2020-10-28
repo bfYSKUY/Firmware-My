@@ -50,6 +50,7 @@
 #include <lib/parameters/param.h>
 #include <mathlib/mathlib.h>
 #include <matrix/math.hpp>
+#include <px4_platform_common/atomic.h>
 #include <px4_platform_common/cli.h>
 #include <px4_platform_common/getopt.h>
 #include <px4_platform_common/module.h>
@@ -58,6 +59,7 @@
 #include <uORB/Subscription.hpp>
 #include <uORB/topics/gps_dump.h>
 #include <uORB/topics/gps_inject_data.h>
+#include <uORB/topics/sensor_gps.h>
 
 #include "devices/src/ashtech.h"
 #include "devices/src/emlid_reach.h"
@@ -81,7 +83,7 @@ typedef enum {
 
 /* struct for dynamic allocation of satellite info data */
 struct GPS_Sat_Info {
-	struct satellite_info_s 	_data;
+	satellite_info_s _data;
 };
 
 static constexpr int TASK_STACK_SIZE = 1760;
@@ -150,7 +152,7 @@ private:
 	char				_port[20] {};					///< device / serial port path
 
 	bool				_healthy{false};				///< flag to signal if the GPS is ok
-	bool        			_mode_auto;				///< if true, auto-detect which GPS is attached
+	bool				_mode_auto;					///< if true, auto-detect which GPS is attached
 
 	gps_driver_mode_t		_mode;						///< current mode
 
@@ -159,32 +161,32 @@ private:
 
 	GPS_Sat_Info			*_sat_info{nullptr};				///< instance of GPS sat info data object
 
-	vehicle_gps_position_s		_report_gps_pos{};				///< uORB topic for gps position
+	sensor_gps_s			_report_gps_pos{};				///< uORB topic for gps position
 	satellite_info_s		*_p_report_sat_info{nullptr};			///< pointer to uORB topic for satellite info
 
-	uORB::PublicationMulti<vehicle_gps_position_s>	_report_gps_pos_pub{ORB_ID(vehicle_gps_position)};	///< uORB pub for gps position
+	uORB::PublicationMulti<sensor_gps_s>	_report_gps_pos_pub{ORB_ID(sensor_gps)};	///< uORB pub for gps position
 	uORB::PublicationMulti<satellite_info_s>	_report_sat_info_pub{ORB_ID(satellite_info)};		///< uORB pub for satellite info
 
 	float				_rate{0.0f};					///< position update rate
 	float				_rate_rtcm_injection{0.0f};			///< RTCM message injection rate
-	unsigned			_last_rate_rtcm_injection_count{0}; 		///< counter for number of RTCM messages
+	unsigned			_last_rate_rtcm_injection_count{0};		///< counter for number of RTCM messages
 
 	const bool			_fake_gps;					///< fake gps output
 
 	const Instance 			_instance;
 
 	uORB::Subscription		_orb_inject_data_sub{ORB_ID(gps_inject_data)};
-	uORB::PublicationQueued<gps_dump_s>	_dump_communication_pub{ORB_ID(gps_dump)};
+	uORB::Publication<gps_dump_s>	_dump_communication_pub{ORB_ID(gps_dump)};
 	gps_dump_s			*_dump_to_device{nullptr};
 	gps_dump_s			*_dump_from_device{nullptr};
 	bool				_should_dump_communication{false};			///< if true, dump communication
 
-	static volatile bool _is_gps_main_advertised; ///< for the second gps we want to make sure that it gets instance 1
+	static px4::atomic_bool _is_gps_main_advertised; ///< for the second gps we want to make sure that it gets instance 1
 	/// and thus we wait until the first one publishes at least one message.
 
-	static volatile GPS *_secondary_instance;
+	static px4::atomic<GPS *> _secondary_instance;
 
-	volatile GPSRestartType _scheduled_reset{GPSRestartType::None};
+	px4::atomic<int> _scheduled_reset{(int)GPSRestartType::None};
 
 	/**
 	 * Publish the gps struct
@@ -243,8 +245,8 @@ private:
 	void initializeCommunicationDump();
 };
 
-volatile bool GPS::_is_gps_main_advertised = false;
-volatile GPS *GPS::_secondary_instance = nullptr;
+px4::atomic_bool GPS::_is_gps_main_advertised{false};
+px4::atomic<GPS *> GPS::_secondary_instance{nullptr};
 
 /*
  * Driver 'main' command.
@@ -280,7 +282,7 @@ GPS::GPS(const char *path, gps_driver_mode_t mode, GPSHelper::Interface interfac
 
 GPS::~GPS()
 {
-	GPS *secondary_instance = (GPS *) _secondary_instance;
+	GPS *secondary_instance = _secondary_instance.load();
 
 	if (_instance == Instance::Main && secondary_instance) {
 		secondary_instance->request_stop();
@@ -291,21 +293,13 @@ GPS::~GPS()
 		do {
 			px4_usleep(20000); // 20 ms
 			++i;
-		} while (_secondary_instance && i < 100);
+		} while (_secondary_instance.load() && i < 100);
 	}
 
-	if (_sat_info) {
-		delete (_sat_info);
-	}
-
-	if (_dump_to_device) {
-		delete (_dump_to_device);
-	}
-
-	if (_dump_from_device) {
-		delete (_dump_from_device);
-	}
-
+	delete _sat_info;
+	delete _dump_to_device;
+	delete _dump_from_device;
+	delete _helper;
 }
 
 int GPS::callback(GPSCallbackType type, void *data1, int data2, void *user)
@@ -900,8 +894,8 @@ GPS::print_status()
 		print_message(_report_gps_pos);
 	}
 
-	if (_instance == Instance::Main && _secondary_instance) {
-		GPS *secondary_instance = (GPS *)_secondary_instance;
+	if (_instance == Instance::Main && _secondary_instance.load()) {
+		GPS *secondary_instance = _secondary_instance.load();
 		secondary_instance->print_status();
 	}
 
@@ -911,10 +905,10 @@ GPS::print_status()
 void
 GPS::schedule_reset(GPSRestartType restart_type)
 {
-	_scheduled_reset = restart_type;
+	_scheduled_reset.store((int)restart_type);
 
-	if (_instance == Instance::Main && _secondary_instance) {
-		GPS *secondary_instance = (GPS *)_secondary_instance;
+	if (_instance == Instance::Main && _secondary_instance.load()) {
+		GPS *secondary_instance = _secondary_instance.load();
 		secondary_instance->schedule_reset(restart_type);
 	}
 }
@@ -922,10 +916,10 @@ GPS::schedule_reset(GPSRestartType restart_type)
 void
 GPS::reset_if_scheduled()
 {
-	GPSRestartType restart_type = _scheduled_reset;
+	GPSRestartType restart_type = (GPSRestartType)_scheduled_reset.load();
 
 	if (restart_type != GPSRestartType::None) {
-		_scheduled_reset = GPSRestartType::None;
+		_scheduled_reset.store((int)GPSRestartType::None);
 		int res = _helper->reset(restart_type);
 
 		if (res == -1) {
@@ -943,12 +937,12 @@ GPS::reset_if_scheduled()
 void
 GPS::publish()
 {
-	if (_instance == Instance::Main || _is_gps_main_advertised) {
+	if (_instance == Instance::Main || _is_gps_main_advertised.load()) {
 		_report_gps_pos_pub.publish(_report_gps_pos);
 		// Heading/yaw data can be updated at a lower rate than the other navigation data.
 		// The uORB message definition requires this data to be set to a NAN if no new valid data is available.
 		_report_gps_pos.heading = NAN;
-		_is_gps_main_advertised = true;
+		_is_gps_main_advertised.store(true);
 	}
 }
 
@@ -1095,10 +1089,10 @@ int GPS::run_trampoline_secondary(int argc, char *argv[])
 
 	GPS *gps = instantiate(argc, argv, Instance::Secondary);
 	if (gps) {
-		_secondary_instance = gps;
+		_secondary_instance.store(gps);
 		gps->run();
 
-		_secondary_instance = nullptr;
+		_secondary_instance.store(nullptr);
 		delete gps;
 	}
 	return 0;
@@ -1215,7 +1209,7 @@ GPS *GPS::instantiate(int argc, char *argv[], Instance instance)
 				/* wait up to 1s */
 				px4_usleep(2500);
 
-			} while (!_secondary_instance && ++i < 400);
+			} while (!_secondary_instance.load() && ++i < 400);
 
 			if (i == 400) {
 				PX4_ERR("Timed out while waiting for thread to start");

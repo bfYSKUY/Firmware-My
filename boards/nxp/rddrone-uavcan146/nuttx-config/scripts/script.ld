@@ -84,17 +84,12 @@ SECTIONS
     *(.gnu.linkonce.r.*)
     _etext = ABSOLUTE(.);
 
-    /*
-     * This is a hack to make the newlib libm __errno() call
-     * use the NuttX get_errno_ptr() function.
-     */
-    __errno = get_errno_ptr;
   } > dflash
 
   .init_section :
   {
     _sinit = ABSOLUTE(.);
-    *(.init_array .init_array.*)
+    KEEP(*(.init_array .init_array.*))
     _einit = ABSOLUTE(.);
   } > dflash
 

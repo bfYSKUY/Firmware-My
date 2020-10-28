@@ -28,7 +28,7 @@ px4_add_board(
 	ROMFSROOT cannode
 	UAVCAN_INTERFACES 2
 	DRIVERS
-		#adc
+		#adc/board_adc
 		#barometer # all available barometer drivers
 		#bootloaders
 		#differential_pressure # all available differential pressure drivers
@@ -37,9 +37,10 @@ px4_add_board(
 		gps
 		#imu # all available imu drivers
 		#lights
+		lights/rgbled_pwm
 		#magnetometer # all available magnetometer drivers
 		#optical_flow # all available optical flow drivers
-		#pwm_out
+		pwm_out
 		#safety_button
 		#tone_alarm
 		#uavcannode # TODO: CAN driver needed
@@ -55,20 +56,21 @@ px4_add_board(
 		#esc_calib
 		#hardfault_log
 		i2cdetect
-		#led_control
-		#mixer
+		led_control
+		mixer
 		#motor_ramp
 		#motor_test
 		#nshterm
 		#param
 		#perf
-		#pwm
+		pwm
 		reboot
 		#reflect
 		#sd_bench
+		system_time
 		top
 		#topic_listener
 		#tune_control
 		ver
-		#work_queue
+		work_queue
 )
