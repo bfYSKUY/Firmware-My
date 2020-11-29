@@ -96,5 +96,8 @@
         "workbench.editor.highlightModifiedTabs": true,
         "workbench.enableExperiments": false,
         "workbench.settings.enableNaturalLanguageSearch": false,
-        "workbench.statusBar.feedback.visible": false
+        "workbench.statusBar.feedback.visible": false,
+        "python.autoComplete.extraPaths": [
+                "/home/starrysky/ros_catkin_ws/install_isolated/lib/python2.7/dist-packages"
+        ]
 }
