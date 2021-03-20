@@ -87,5 +87,6 @@
         "workbench.editor.enablePreviewFromQuickOpen": false,
         "workbench.editor.highlightModifiedTabs": true,
         "workbench.settings.enableNaturalLanguageSearch": false,
-        "workbench.statusBar.feedback.visible": false
+        "workbench.statusBar.feedback.visible": false,
+        "python.pythonPath": "g:\\cygwin64\\bin\\python3.6m.exe"
 }
