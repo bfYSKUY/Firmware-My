@@ -208,7 +208,7 @@ public:
 			PX4_ERR("Task already running");
 
 		} else {
-			ret = T::task_spawn(argc, argv);
+			ret = T::task_spawn(argc, argv);  //调用Commander.cpp 中的task_spawn函数
 
 			if (ret < 0) {
 				PX4_ERR("Task start failed (%i)", ret);

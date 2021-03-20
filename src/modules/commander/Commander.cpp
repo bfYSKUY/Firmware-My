@@ -438,7 +438,7 @@ int commander_main(int argc, char *argv[])
 		return (ret ? 0 : 1);
 	}
 
-	if (!strcmp(argv[1], "mode")) {
+	if (!strcmp(argv[1], "mode")) {    // commander 命令
 		if (argc > 2) {
 			uint8_t new_main_state = commander_state_s::MAIN_STATE_MAX;
 
@@ -565,6 +565,7 @@ Commander::Commander() :
 	_telemetry_status_sub = orb_subscribe(ORB_ID(telemetry_status));
 
 
+	// 2赋值status和status_flags
 	// We want to accept RC inputs as default
 	status.rc_input_mode = vehicle_status_s::RC_IN_MODE_DEFAULT;
 	internal_state.main_state = commander_state_s::MAIN_STATE_MANUAL;
@@ -1183,6 +1184,7 @@ Commander::run()
 	// XXX for now just set sensors as initialized
 	status_flags.condition_system_sensors_initialized = true;
 
+	//1获取默认参数
 	/* set parameters */
 	param_t _param_sys_type = param_find("MAV_TYPE");
 	param_t _param_system_id = param_find("MAV_SYS_ID");
@@ -1264,9 +1266,11 @@ Commander::run()
 	orb_advert_t vehicle_status_flags_pub = nullptr;
 
 	/* init mission state, do it here to allow navigator to use stored mission even if mavlink failed to start */
+	// 3 用dm_read读取mission结构体，即使mavlink启动失败，navigator也可以使用航点
 	mission_init();
 
 	/* Start monitoring loop */
+	// 4订阅topic
 	unsigned counter = 0;
 	int stick_off_counter = 0;
 	int stick_on_counter = 0;
@@ -1295,11 +1299,13 @@ Commander::run()
 
 	vtol_status.vtol_in_rw_mode = true;		// default for vtol is rotary wing
 
+	//5控制LED灯
 	control_status_leds(&status, &armed, true, _battery_warning, &cpuload);
 
 	thread_running = true;
 
 	/* update vehicle status to find out vehicle type (required for preflight checks) */
+	//6 获取飞机机型
 	int32_t system_type;
 	param_get(_param_sys_type, &system_type); // get system type
 	status.system_type = (uint8_t)system_type;
@@ -1314,6 +1320,7 @@ Commander::run()
 	_last_lvel_fail_time_us = commander_boot_timestamp;
 
 	// Run preflight check
+	//7 起飞前检查
 	int32_t rc_in_off = 0;
 
 	param_get(_param_rc_in_off, &rc_in_off);
@@ -1356,6 +1363,7 @@ Commander::run()
 	float ef_time_thres = 1000.0f;
 	uint64_t timestamp_engine_healthy = 0; /**< absolute time when engine was healty */
 
+	//8 创建一个低优先级进程，主要做answer_command()
 	/* check which state machines for changes, clear "changed" flag */
 	bool failsafe_old = false;
 
@@ -1384,11 +1392,13 @@ Commander::run()
 	// run preflight immediately to find all relevant parameters, but don't report
 	preflight_check(false);
 
+	//9 真正的循环，重新开始计数
 	while (!should_exit()) {
 
 		transition_result_t arming_ret = TRANSITION_NOT_CHANGED;
 
 		/* update parameters */
+		//1 首先进行参数更新
 		bool params_updated = false;
 		orb_check(param_changed_sub, &params_updated);
 
@@ -1502,12 +1512,14 @@ Commander::run()
 			}
 		}
 
+		//2 遥控输入更新
 		orb_check(sp_man_sub, &updated);
 
 		if (updated) {
 			orb_copy(ORB_ID(manual_control_setpoint), sp_man_sub, &sp_man);
 		}
 
+		//3 离线控制更新
 		orb_check(offboard_control_mode_sub, &updated);
 
 		if (updated) {
@@ -1557,6 +1569,7 @@ Commander::run()
 			}
 		}
 
+		// 系统电量状态更新
 		orb_check(system_power_sub, &updated);
 
 		if (updated) {
@@ -1588,6 +1601,7 @@ Commander::run()
 		}
 
 		/* update safety topic */
+		// 系统安全状态更新
 		orb_check(safety_sub, &updated);
 
 		if (updated) {
@@ -1623,6 +1637,7 @@ Commander::run()
 		}
 
 		/* update vtol vehicle status*/
+		//垂起状态更新
 		orb_check(vtol_vehicle_status_sub, &updated);
 
 		if (updated) {
@@ -1665,6 +1680,7 @@ Commander::run()
 		airspeed_use_check();
 
 		/* Update land detector */
+		//降落过程更新
 		orb_check(land_detector_sub, &updated);
 
 		if (updated) {
@@ -1825,6 +1841,7 @@ Commander::run()
 		}
 
 		/* start geofence result check */
+		//地理围栏更新
 		orb_check(geofence_result_sub, &updated);
 
 		if (updated) {
@@ -2143,6 +2160,7 @@ Commander::run()
 		}
 
 		// data link checks which update the status
+		//数传更新
 		data_link_check(status_changed);
 
 		// engine failure detection
@@ -3767,6 +3785,7 @@ void Commander::enable_hil()
 void Commander::mission_init()
 {
 	/* init mission state, do it here to allow navigator to use stored mission even if mavlink failed to start */
+	// 3 用dm_read读取mission结构体，即使mavlink启动失败，navigator也可以使用航点
 	mission_s mission = {};
 
 	if (dm_read(DM_KEY_MISSION_STATE, 0, &mission, sizeof(mission_s)) == sizeof(mission_s)) {
