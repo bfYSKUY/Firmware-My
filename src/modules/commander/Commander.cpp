@@ -1109,6 +1109,7 @@ bool
 Commander::set_home_position()
 {
 	// Need global and local position fix to be able to set home
+	//全局位置数据更新
 	if (status_flags.condition_global_position_valid && status_flags.condition_local_position_valid) {
 
 		const vehicle_global_position_s &gpos = _global_position_sub.get();
@@ -1601,7 +1602,7 @@ Commander::run()
 		}
 
 		/* update safety topic */
-		// 系统安全状态更新
+		// 安全开关更新
 		orb_check(safety_sub, &updated);
 
 		if (updated) {
@@ -1613,12 +1614,16 @@ Commander::run()
 				if (armed.armed && (status.hil_state == vehicle_status_s::HIL_STATE_OFF)
 				    && safety.safety_switch_available && !safety.safety_off) {
 
-					if (TRANSITION_CHANGED == arming_state_transition(&status, safety, vehicle_status_s::ARMING_STATE_STANDBY,
-							&armed, true /* fRunPreArmChecks */, &mavlink_log_pub,
-							&status_flags, arm_requirements, hrt_elapsed_time(&commander_boot_timestamp))
-					   ) {
-						status_changed = true;
-					}
+					if (TRANSITION_CHANGED == arming_state_transition(&status,  //当前飞机状态
+											  safety, //之前安全开关状态
+											  vehicle_status_s::ARMING_STATE_STANDBY, //当前飞机解锁状态
+											  &armed,
+											  true, /* fRunPreArmChecks */  //飞行前的检查有没有成功
+											  &mavlink_log_pub,
+											  &status_flags,
+											  arm_requirements, //解锁必要条件
+											  hrt_elapsed_time(&commander_boot_timestamp)))
+					{status_changed = true;}
 				}
 
 				// Notify the user if the status of the safety switch changes
@@ -1680,7 +1685,7 @@ Commander::run()
 		airspeed_use_check();
 
 		/* Update land detector */
-		//降落过程更新
+		//落地检测更新
 		orb_check(land_detector_sub, &updated);
 
 		if (updated) {
@@ -1764,15 +1769,18 @@ Commander::run()
 			warning_action_on = false;
 		}
 
+		//cpu负载更新
 		orb_check(cpuload_sub, &updated);
 
 		if (updated) {
 			orb_copy(ORB_ID(cpuload), cpuload_sub, &cpuload);
 		}
 
+		//电池状态更新
 		battery_status_check();
 
 		/* update subsystem info which arrives from outside of commander*/
+		//子系统更新：检查内部传感器状态
 		do {
 			orb_check(subsys_sub, &updated);
 
@@ -1963,6 +1971,7 @@ Commander::run()
 
 
 		/* Check for mission flight termination */
+		//飞行终止检查
 		if (armed.armed && _mission_result_sub.get().flight_termination &&
 		    !status_flags.circuit_breaker_flight_termination_disabled) {
 
@@ -1981,6 +1990,7 @@ Commander::run()
 		}
 
 		/* RC input check */
+		//遥控器的解锁上锁检查，有降级策略
 		if (!status_flags.rc_input_blocked && sp_man.timestamp != 0 &&
 		    (hrt_elapsed_time(&sp_man.timestamp) < (_param_com_rc_loss_t.get() * 1_s))) {
 
@@ -2001,6 +2011,7 @@ Commander::run()
 				}
 			}
 
+			//如果遥控器信号未丢失
 			status.rc_signal_lost = false;
 
 			const bool in_armed_state = (status.arming_state == vehicle_status_s::ARMING_STATE_ARMED);
@@ -2008,12 +2019,12 @@ Commander::run()
 			const bool arm_button_pressed = arm_switch_is_button == 1
 							&& sp_man.arm_switch == manual_control_setpoint_s::SWITCH_POS_ON;
 
-			/* DISARM
+			/* DISARM  //上锁
 			 * check if left stick is in lower left position or arm button is pushed or arm switch has transition from arm to disarm
 			 * and we are in MANUAL, Rattitude, or AUTO_READY mode or (ASSIST mode and landed)
 			 * do it only for rotary wings in manual mode or fixed wing if landed.
 			 * Disable stick-disarming if arming switch or button is mapped */
-			const bool stick_in_lower_left = sp_man.r < -STICK_ON_OFF_LIMIT && sp_man.z < 0.1f
+			const bool stick_in_lower_left = sp_man.r < -STICK_ON_OFF_LIMIT && sp_man.z < 0.1f // 手动模式下，偏航打到最低（靠左），且油门最小
 							 && !arm_switch_or_button_mapped;
 			const bool arm_switch_to_disarm_transition =  arm_switch_is_button == 0 &&
 					_last_sp_man_arm_switch == manual_control_setpoint_s::SWITCH_POS_ON &&
@@ -2044,7 +2055,7 @@ Commander::run()
 				stick_off_counter = 0;
 			}
 
-			/* ARM
+			/* ARM //解锁
 			 * check if left stick is in lower right position or arm button is pushed or arm switch has transition from disarm to arm
 			 * and we're in MANUAL mode.
 			 * Disable stick-arming if arming switch or button is mapped */
@@ -2160,11 +2171,12 @@ Commander::run()
 		}
 
 		// data link checks which update the status
-		//数传更新
+		//数传检查
 		data_link_check(status_changed);
 
 		// engine failure detection
 		// TODO: move out of commander
+		//针对固定翼检测发动机故障
 		orb_check(actuator_controls_sub, &updated);
 
 		if (updated) {
@@ -2242,6 +2254,7 @@ Commander::run()
 		}
 
 		/* handle commands last, as the system needs to be updated to handle them */
+		// commander 更新
 		orb_check(cmd_sub, &updated);
 
 		if (updated) {
@@ -2257,6 +2270,7 @@ Commander::run()
 		}
 
 		/* Check for failure detector status */
+		//飞行终止检查
 		if (armed.armed) {
 
 			if (_failure_detector.update()) {
@@ -2285,6 +2299,7 @@ Commander::run()
 		const hrt_abstime now = hrt_absolute_time();
 
 		// automatically set or update home position
+		// home位置数据更新
 		if (!_home_pub.get().manual_home) {
 			const vehicle_local_position_s &local_position = _local_position_sub.get();
 
@@ -2293,7 +2308,7 @@ Commander::run()
 				    (hrt_elapsed_time(&commander_boot_timestamp) > INAIR_RESTART_HOLDOFF_INTERVAL)) {
 
 					/* update home position on arming if at least 500 ms from commander start spent to avoid setting home on in-air restart */
-					set_home_position();
+					set_home_position(); //设置home点
 				}
 
 			} else {
@@ -2342,6 +2357,7 @@ Commander::run()
 		was_armed = armed.armed;
 
 		/* now set navigation state according to failsafe and main state */
+		// 设置导航状态，是在飞行模式下检查有没有故障发生，如果发生故障该如何飞行：遥控器切换的模式和飞机的失效保护
 		bool nav_state_changed = set_nav_state(&status,
 						       &armed,
 						       &internal_state,
@@ -2370,9 +2386,10 @@ Commander::run()
 		}
 
 		/* publish states (armed, control_mode, vehicle_status, commander_state, vehicle_status_flags) at 1 Hz or immediately when changed */
+		// 设置飞行模式
 		if (hrt_elapsed_time(&status.timestamp) >= 1_s || status_changed || nav_state_changed) {
 
-			set_control_mode();
+			set_control_mode(); // 设置飞行模式
 			control_mode.timestamp = now;
 			orb_publish(ORB_ID(vehicle_control_mode), control_mode_pub, &control_mode);
 
@@ -2417,6 +2434,7 @@ Commander::run()
 		}
 
 		/* play arming and battery warning tunes */
+		//播放警报
 		if (!arm_tune_played && armed.armed && (!safety.safety_switch_available || (safety.safety_switch_available
 							&& safety.safety_off))) {
 			/* play tune when armed */
@@ -2502,6 +2520,7 @@ Commander::run()
 
 	rgbled_set_color_and_mode(led_control_s::COLOR_WHITE, led_control_s::MODE_OFF);
 
+	// 结束
 	/* close fds */
 	led_deinit();
 	buzzer_deinit();
@@ -2685,7 +2704,7 @@ Commander::set_main_state(const vehicle_status_s &status_local, bool *changed)
 		return set_main_state_override_on(status_local, changed);
 
 	} else {
-		return set_main_state_rc(status_local, changed);
+		return set_main_state_rc(status_local, changed); //遥控器设置目标状态（模式）
 	}
 }
 
@@ -2700,10 +2719,10 @@ Commander::set_main_state_override_on(const vehicle_status_s &status_local, bool
 }
 
 transition_result_t
-Commander::set_main_state_rc(const vehicle_status_s &status_local, bool *changed)
+Commander::set_main_state_rc(const vehicle_status_s &status_local, bool *changed)  //遥控器设置飞行模式
 {
 	/* set main state according to RC switches */
-	transition_result_t res = TRANSITION_DENIED;
+	transition_result_t res = TRANSITION_DENIED;  //遥控器切换失败
 
 	// Note: even if status_flags.offboard_control_set_by_command is set
 	// we want to allow rc mode change to take precidence.  This is a safety
@@ -2753,7 +2772,7 @@ Commander::set_main_state_rc(const vehicle_status_s &status_local, bool *changed
 		}
 
 		/* no timestamp change or no switch change -> nothing changed */
-		return TRANSITION_NOT_CHANGED;
+		return TRANSITION_NOT_CHANGED; //遥控器未切换
 	}
 
 	_last_sp_man = sp_man;
@@ -2777,6 +2796,7 @@ Commander::set_main_state_rc(const vehicle_status_s &status_local, bool *changed
 	}
 
 	/* RTL switch overrides main switch */
+	// 遥控器RTL独立开关
 	if (sp_man.return_switch == manual_control_setpoint_s::SWITCH_POS_ON) {
 		res = main_state_transition(status_local, commander_state_s::MAIN_STATE_AUTO_RTL, status_flags, &internal_state);
 
@@ -2817,7 +2837,7 @@ Commander::set_main_state_rc(const vehicle_status_s &status_local, bool *changed
 
 		int new_mode = _flight_mode_slots[sp_man.mode_slot];
 
-		if (new_mode < 0) {
+		if (new_mode < 0) {   //没切换
 			/* slot is unused */
 			res = TRANSITION_NOT_CHANGED;
 
