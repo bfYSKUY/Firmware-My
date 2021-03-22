@@ -2698,10 +2698,10 @@ control_status_leds(vehicle_status_s *status_local, const actuator_armed_s *actu
 }
 
 transition_result_t
-Commander::set_main_state(const vehicle_status_s &status_local, bool *changed)
+Commander::set_main_state(const vehicle_status_s &status_local, bool *changed)  //设置当前目标状态（模式）
 {
 	if (safety.override_available && safety.override_enabled) {
-		return set_main_state_override_on(status_local, changed);
+		return set_main_state_override_on(status_local, changed);  //手动设置覆盖当前模式的模式
 
 	} else {
 		return set_main_state_rc(status_local, changed); //遥控器设置目标状态（模式）
@@ -2711,10 +2711,9 @@ Commander::set_main_state(const vehicle_status_s &status_local, bool *changed)
 transition_result_t
 Commander::set_main_state_override_on(const vehicle_status_s &status_local, bool *changed)
 {
-	transition_result_t res = main_state_transition(status_local, commander_state_s::MAIN_STATE_MANUAL, status_flags,
-				  &internal_state);
+	//模式切换状态的判断和降级处理    main_state_transition 在state_machine_helper.cpp中定义
+	transition_result_t res = main_state_transition(status_local, commander_state_s::MAIN_STATE_MANUAL, status_flags, &internal_state);
 	*changed = (res == TRANSITION_CHANGED);
-
 	return res;
 }
 

@@ -361,9 +361,9 @@ main_state_transition(const vehicle_status_s &status, const main_state_t new_mai
 		break;
 	}
 
-	if (ret == TRANSITION_CHANGED) {
+	if (ret == TRANSITION_CHANGED) {   //判断：如果能切换
 		if (internal_state->main_state != new_main_state) {
-			internal_state->main_state = new_main_state;
+			internal_state->main_state = new_main_state;  //先保存内部当前实际的飞行模式，再保存本次决定的飞行模式（new_main_state）结果为main_state
 			internal_state->timestamp = hrt_absolute_time();
 
 		} else {
