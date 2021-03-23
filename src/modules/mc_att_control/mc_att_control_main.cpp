@@ -517,7 +517,7 @@ MulticopterAttitudeControl::generate_attitude_setpoint(float dt, bool reset_yaw_
  * Output: '_rates_sp' vector, '_thrust_sp'
  */
 void
-MulticopterAttitudeControl::control_attitude()
+MulticopterAttitudeControl::control_attitude()  //控制姿态
 {
 	vehicle_attitude_setpoint_poll();
 
@@ -796,6 +796,7 @@ MulticopterAttitudeControl::run()
 			orb_copy(ORB_ID(sensor_gyro), _sensor_gyro_sub[_selected_gyro], &_sensor_gyro);
 
 			/* run the rate controller immediately after a gyro update */
+			// 是否运行角速度控制
 			if (_v_control_mode.flag_control_rates_enabled) {
 				control_attitude_rates(dt);
 
@@ -818,6 +819,7 @@ MulticopterAttitudeControl::run()
 			/* Check if we are in rattitude mode and the pilot is above the threshold on pitch
 			 * or roll (yaw can rotate 360 in normal att control). If both are true don't
 			 * even bother running the attitude controllers */
+			// 是否运行外环姿态控制
 			if (_v_control_mode.flag_control_rattitude_enabled) {
 				_v_control_mode.flag_control_attitude_enabled =
 						fabsf(_manual_control_sp.y) <= _param_mc_ratt_th.get() &&
@@ -837,6 +839,7 @@ MulticopterAttitudeControl::run()
 			if (run_att_ctrl) {
 				if (attitude_updated) {
 					// Generate the attitude setpoint from stick inputs if we are in Manual/Stabilized mode
+					// 是否运行手动控制
 					if (_v_control_mode.flag_control_manual_enabled &&
 							!_v_control_mode.flag_control_altitude_enabled &&
 							!_v_control_mode.flag_control_velocity_enabled &&

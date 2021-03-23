@@ -410,21 +410,22 @@ bool set_nav_state(vehicle_status_s *status, actuator_armed_s *armed, commander_
 	reset_link_loss_globals(armed, old_failsafe, data_link_loss_act);
 
 	/* evaluate main state to decide in normal (non-failsafe) mode */
+	// 评估在在正常情况下的状态
 	switch (internal_state->main_state) {
 	case commander_state_s::MAIN_STATE_ACRO:
 	case commander_state_s::MAIN_STATE_MANUAL:
-	case commander_state_s::MAIN_STATE_RATTITUDE:
+	case commander_state_s::MAIN_STATE_RATTITUDE:  //半自稳
 	case commander_state_s::MAIN_STATE_STAB:
 	case commander_state_s::MAIN_STATE_ALTCTL:
 
 		/* require RC for all manual modes */
-		if (rc_lost && is_armed) {
+		if (rc_lost && is_armed) {   // 在上述情况下，检查遥控器信号。如果丢失信号，触发失效保护机制
 			enable_failsafe(status, old_failsafe, mavlink_log_pub, reason_no_rc);
 
 			set_link_loss_nav_state(status, armed, status_flags, internal_state, rc_loss_act,
 						vehicle_status_s::NAVIGATION_STATE_AUTO_RCRECOVER);
 
-		} else {
+		} else {      //正常情况下，该什么模式就什么模式
 			switch (internal_state->main_state) {
 			case commander_state_s::MAIN_STATE_ACRO:
 				status->nav_state = vehicle_status_s::NAVIGATION_STATE_ACRO;
@@ -454,13 +455,13 @@ bool set_nav_state(vehicle_status_s *status, actuator_armed_s *armed, commander_
 
 		break;
 
-	case commander_state_s::MAIN_STATE_POSCTL: {
+	case commander_state_s::MAIN_STATE_POSCTL: {  //在POSCTL模式下
 
-			if (rc_lost && is_armed) {
+			if (rc_lost && is_armed) {   //遥控器信号丢失
 				enable_failsafe(status, old_failsafe, mavlink_log_pub, reason_no_rc);
 
 				set_link_loss_nav_state(status, armed, status_flags, internal_state, rc_loss_act,
-							vehicle_status_s::NAVIGATION_STATE_AUTO_RCRECOVER);
+							vehicle_status_s::NAVIGATION_STATE_AUTO_RCRECOVER);  //触发失效保护机制
 
 				/* As long as there is RC, we can fallback to ALTCTL, or STAB. */
 				/* A local position estimate is enough for POSCTL for multirotors,

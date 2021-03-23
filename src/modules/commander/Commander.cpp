@@ -2795,9 +2795,9 @@ Commander::set_main_state_rc(const vehicle_status_s &status_local, bool *changed
 	}
 
 	/* RTL switch overrides main switch */
-	// 遥控器RTL独立开关
+	// 遥控器RTL独立开关--一键返航
 	if (sp_man.return_switch == manual_control_setpoint_s::SWITCH_POS_ON) {
-		res = main_state_transition(status_local, commander_state_s::MAIN_STATE_AUTO_RTL, status_flags, &internal_state);
+		res = main_state_transition(status_local, commander_state_s::MAIN_STATE_AUTO_RTL, status_flags, &internal_state);  // main_state_transition 判断是否切换成功
 
 		if (res == TRANSITION_DENIED) {
 			print_reject_mode("AUTO RTL");
@@ -2834,13 +2834,13 @@ Commander::set_main_state_rc(const vehicle_status_s &status_local, bool *changed
 			return TRANSITION_DENIED;
 		}
 
-		int new_mode = _flight_mode_slots[sp_man.mode_slot];
+		int new_mode = _flight_mode_slots[sp_man.mode_slot];  // _flight_mode_slots 人为设置的六大模式
 
 		if (new_mode < 0) {   //没切换
 			/* slot is unused */
 			res = TRANSITION_NOT_CHANGED;
 
-		} else {
+		} else {  //如果未切换成功的降级策略
 			res = main_state_transition(status_local, new_mode, status_flags, &internal_state);
 
 			/* ensure that the mode selection does not get stuck here */
@@ -2966,6 +2966,7 @@ Commander::set_main_state_rc(const vehicle_status_s &status_local, bool *changed
 	}
 
 	/* offboard and RTL switches off or denied, check main mode switch */
+	// 独立飞行模式的开关
 	switch (sp_man.mode_switch) {
 	case manual_control_setpoint_s::SWITCH_POS_NONE:
 		res = TRANSITION_NOT_CHANGED;
@@ -2978,7 +2979,7 @@ Commander::set_main_state_rc(const vehicle_status_s &status_local, bool *changed
 			 * Legacy mode:
 			 * Acro switch being used as stabilized switch in FW.
 			 */
-			if (sp_man.acro_switch == manual_control_setpoint_s::SWITCH_POS_ON) {
+			if (sp_man.acro_switch == manual_control_setpoint_s::SWITCH_POS_ON) {  //是否为垂直起降
 				/* manual mode is stabilized already for multirotors, so switch to acro
 				 * for any non-manual mode
 				 */
@@ -2992,7 +2993,7 @@ Commander::set_main_state_rc(const vehicle_status_s &status_local, bool *changed
 					res = main_state_transition(status_local, commander_state_s::MAIN_STATE_MANUAL, status_flags, &internal_state);
 				}
 
-			} else if (sp_man.rattitude_switch == manual_control_setpoint_s::SWITCH_POS_ON) {
+			} else if (sp_man.rattitude_switch == manual_control_setpoint_s::SWITCH_POS_ON) {  //如果是特技模式
 				/* Similar to acro transitions for multirotors.  FW aircraft don't need a
 				 * rattitude mode.*/
 				if (status.is_rotary_wing) {
@@ -3036,7 +3037,7 @@ Commander::set_main_state_rc(const vehicle_status_s &status_local, bool *changed
 		// TRANSITION_DENIED is not possible here
 		break;
 
-	case manual_control_setpoint_s::SWITCH_POS_MIDDLE:		// ASSIST
+	case manual_control_setpoint_s::SWITCH_POS_MIDDLE:		// ASSIST    //半自稳模式
 		if (sp_man.posctl_switch == manual_control_setpoint_s::SWITCH_POS_ON) {
 			res = main_state_transition(status_local, commander_state_s::MAIN_STATE_POSCTL, status_flags, &internal_state);
 
@@ -3214,7 +3215,7 @@ set_control_mode()
 		control_mode.flag_control_auto_enabled = false;
 		control_mode.flag_control_rates_enabled = true;
 		control_mode.flag_control_attitude_enabled = true;
-		control_mode.flag_control_rattitude_enabled = false;
+		control_mode.flag_control_rattitude_enabled = false;   //不允许半自稳控制
 		control_mode.flag_control_altitude_enabled = false;
 		control_mode.flag_control_climb_rate_enabled = false;
 		control_mode.flag_control_position_enabled = false;
@@ -3228,7 +3229,7 @@ set_control_mode()
 		control_mode.flag_control_auto_enabled = false;
 		control_mode.flag_control_rates_enabled = true;
 		control_mode.flag_control_attitude_enabled = true;
-		control_mode.flag_control_rattitude_enabled = true;
+		control_mode.flag_control_rattitude_enabled = true;   //允许半自稳控制：小舵量控制角度，大舵量控制角速度
 		control_mode.flag_control_altitude_enabled = false;
 		control_mode.flag_control_climb_rate_enabled = false;
 		control_mode.flag_control_position_enabled = false;
