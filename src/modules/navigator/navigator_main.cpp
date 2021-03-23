@@ -239,7 +239,7 @@ Navigator::run()
 
 	hrt_abstime last_geofence_check = 0;
 
-	while (!should_exit()) {
+	while (!should_exit()) {   // 执行导航功能
 
 		/* wait for up to 1000ms for data */
 		int pret = px4_poll(&fds[0], (sizeof(fds) / sizeof(fds[0])), 1000);
@@ -317,10 +317,10 @@ Navigator::run()
 			home_position_update();
 		}
 
-		/* vehicle_command updated */
+		/* vehicle_command updated */  //检查飞机的命令更新
 		orb_check(_vehicle_command_sub, &updated);
 
-		if (updated) {
+		if (updated) {  //如果命令更新，则需对比命令。
 			vehicle_command_s cmd;
 			orb_copy(ORB_ID(vehicle_command), _vehicle_command_sub, &cmd);
 
@@ -402,9 +402,9 @@ Navigator::run()
 				// CMD_DO_REPOSITION is acknowledged by commander
 
 			} else if (cmd.command == vehicle_command_s::VEHICLE_CMD_NAV_TAKEOFF) {
-				position_setpoint_triplet_s *rep = get_takeoff_triplet();
+				position_setpoint_triplet_s *rep = get_takeoff_triplet();  //创建航点组合
 
-				// store current position as previous position and goal as next
+				// store current position as previous position and goal as next  //将当前位置设为上一个的目标点
 				rep->previous.yaw = get_global_position()->yaw;
 				rep->previous.lat = get_global_position()->lat;
 				rep->previous.lon = get_global_position()->lon;
@@ -535,10 +535,10 @@ Navigator::run()
 			}
 		}
 
-		/* Check for traffic */
+		/* Check for traffic */    //命令更新之后检查状况
 		check_traffic();
 
-		/* Check geofence violation */
+		/* Check geofence violation */   //检查地理围栏
 		if (have_geofence_position_data &&
 		    (_geofence.getGeofenceAction() != geofence_result_s::GF_ACTION_NONE) &&
 		    (hrt_elapsed_time(&last_geofence_check) > GEOFENCE_CHECK_INTERVAL)) {
@@ -576,7 +576,7 @@ Navigator::run()
 		/* Do stuff according to navigation state set by commander */
 		NavigatorMode *navigation_mode_new{nullptr};
 
-		switch (_vstatus.nav_state) {
+		switch (_vstatus.nav_state) {   //查询当前飞机飞行模式
 		case vehicle_status_s::NAVIGATION_STATE_AUTO_MISSION:
 			_pos_sp_triplet_published_invalid_once = false;
 
@@ -741,7 +741,7 @@ Navigator::run()
 			break;
 		}
 
-		// update the vehicle status
+		// update the vehicle status   //更新导航模式
 		_previous_nav_state = _vstatus.nav_state;
 
 		/* we have a new navigation mode: reset triplet */
@@ -762,7 +762,7 @@ Navigator::run()
 
 		/* iterate through navigation modes and set active/inactive for each */
 		for (unsigned int i = 0; i < NAVIGATOR_MODE_ARRAY_SIZE; i++) {
-			_navigation_mode_array[i]->run(_navigation_mode == _navigation_mode_array[i]);
+			_navigation_mode_array[i]->run(_navigation_mode == _navigation_mode_array[i]);  //运行确定的导航模式
 		}
 
 		/* if we landed and have not received takeoff setpoint then stay in idle */
