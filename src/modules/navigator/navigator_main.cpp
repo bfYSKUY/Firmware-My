@@ -762,7 +762,7 @@ Navigator::run()
 
 		/* iterate through navigation modes and set active/inactive for each */
 		for (unsigned int i = 0; i < NAVIGATOR_MODE_ARRAY_SIZE; i++) {
-			_navigation_mode_array[i]->run(_navigation_mode == _navigation_mode_array[i]);  //运行确定的导航模式
+			_navigation_mode_array[i]->run(_navigation_mode == _navigation_mode_array[i]);  //运行确定的导航模式   navigator_mode.cpp 中的run
 		}
 
 		/* if we landed and have not received takeoff setpoint then stay in idle */
@@ -780,15 +780,15 @@ Navigator::run()
 		/* if nothing is running, set position setpoint triplet invalid once */
 		if (_navigation_mode == nullptr && !_pos_sp_triplet_published_invalid_once) {
 			_pos_sp_triplet_published_invalid_once = true;
-			reset_triplets();
+			reset_triplets();   // _pos_sp_triplet_updated = true;
 		}
 
-		if (_pos_sp_triplet_updated) {
+		if (_pos_sp_triplet_updated) {  // 上述reset_triplets()运行之后，才有效
 			publish_position_setpoint_triplet();
 		}
 
 		if (_mission_result_updated) {
-			publish_mission_result();
+			publish_mission_result();  //发布mission结果：commander.cpp  或者 mavlink_mission.cpp 调用，检查任务状态
 		}
 
 		perf_end(_loop_perf);

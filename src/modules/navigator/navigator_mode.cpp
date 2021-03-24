@@ -57,9 +57,10 @@ NavigatorMode::run(bool active)
 	if (active) {
 		if (!_active) {
 			/* first run, reset stay in failsafe flag */
+			// 第一次运行
 			_navigator->get_mission_result()->stay_in_failsafe = false;
 			_navigator->set_mission_result_updated();
-			on_activation();
+			on_activation();  //置为false
 
 		} else {
 			/* periodic updates when active */
