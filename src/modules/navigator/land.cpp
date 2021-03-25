@@ -50,7 +50,7 @@ void
 Land::on_activation()
 {
 	/* set current mission item to Land */
-	set_land_item(&_mission_item, true);
+	set_land_item(&_mission_item, true);   // 调用-在mission_block.cpp中
 	_navigator->get_mission_result()->finished = false;
 	_navigator->set_mission_result_updated();
 	reset_mission_item_reached();
@@ -59,11 +59,11 @@ Land::on_activation()
 	struct position_setpoint_triplet_s *pos_sp_triplet = _navigator->get_position_setpoint_triplet();
 	pos_sp_triplet->previous.valid = false;
 	mission_apply_limitation(_mission_item);
-	mission_item_to_position_setpoint(_mission_item, &pos_sp_triplet->current);
+	mission_item_to_position_setpoint(_mission_item, &pos_sp_triplet->current);  //将mission_item的值传输给pos_sp_triplet
 	pos_sp_triplet->next.valid = false;
 
+	// 降落后，不需要令飞机在目标点悬停
 	_navigator->set_can_loiter_at_sp(false);
-
 	_navigator->set_position_setpoint_triplet_updated();
 }
 
