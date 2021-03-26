@@ -80,13 +80,13 @@ Land::on_active()
 	}
 
 
-	if (_navigator->get_land_detected()->landed) {
+	if (_navigator->get_land_detected()->landed) {   // 如果降落已完成
 		_navigator->get_mission_result()->finished = true;
 		_navigator->set_mission_result_updated();
-		set_idle_item(&_mission_item);
+		set_idle_item(&_mission_item);  // 设置空闲任务点，不控制位置和姿态
 
 		struct position_setpoint_triplet_s *pos_sp_triplet = _navigator->get_position_setpoint_triplet();
-		mission_item_to_position_setpoint(_mission_item, &pos_sp_triplet->current);
-		_navigator->set_position_setpoint_triplet_updated();
+		mission_item_to_position_setpoint(_mission_item, &pos_sp_triplet->current);   // 将空闲任务点赋值给current
+		_navigator->set_position_setpoint_triplet_updated();   // 通知其他线程该uorb量的更新
 	}
 }

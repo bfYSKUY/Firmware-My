@@ -861,7 +861,7 @@ Mission::set_mission_items()
 							_navigator->get_precland()->set_mode(PrecLandMode::Required);
 						}
 
-						_navigator->get_precland()->on_activation();
+						_navigator->get_precland()->on_activation();  //访问 land.cpp下的函数
 
 					}
 				}
@@ -880,7 +880,7 @@ Mission::set_mission_items()
 							_navigator->get_precland()->set_mode(PrecLandMode::Required);
 						}
 
-						_navigator->get_precland()->on_activation();
+						_navigator->get_precland()->on_activation();  //访问 land.cpp下的函数
 
 					}
 
