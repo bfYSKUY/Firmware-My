@@ -594,11 +594,11 @@ void
 MissionBlock::set_loiter_item(struct mission_item_s *item, float min_clearance)
 {
 	if (_navigator->get_land_detected()->landed) {
-		/* landed, don't takeoff, but switch to IDLE mode */
+		/* landed, don't takeoff, but switch to IDLE mode */  // 如果已着陆，则设置为空闲状态
 		item->nav_cmd = NAV_CMD_IDLE;
 
 	} else {
-		item->nav_cmd = NAV_CMD_LOITER_UNLIMITED;
+		item->nav_cmd = NAV_CMD_LOITER_UNLIMITED;  // 如果没有其他切换，则无限悬停
 
 		struct position_setpoint_triplet_s *pos_sp_triplet = _navigator->get_position_setpoint_triplet();
 

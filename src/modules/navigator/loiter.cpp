@@ -57,11 +57,11 @@ Loiter::on_inactive()
 void
 Loiter::on_activation()
 {
-	if (_navigator->get_reposition_triplet()->current.valid) {
+	if (_navigator->get_reposition_triplet()->current.valid) {  // 查看该点是否有值（赋值）
 		reposition();
 
 	} else {
-		set_loiter_position();
+		set_loiter_position();   // 设置悬停任务参数
 	}
 }
 
@@ -73,7 +73,7 @@ Loiter::on_active()
 	}
 
 	// reset the loiter position if we get disarmed
-	if (_navigator->get_vstatus()->arming_state != vehicle_status_s::ARMING_STATE_ARMED) {
+	if (_navigator->get_vstatus()->arming_state != vehicle_status_s::ARMING_STATE_ARMED) {  //如果上锁
 		_loiter_pos_set = false;
 	}
 }
@@ -81,11 +81,11 @@ Loiter::on_active()
 void
 Loiter::set_loiter_position()
 {
-	if (_navigator->get_vstatus()->arming_state != vehicle_status_s::ARMING_STATE_ARMED &&
-	    _navigator->get_land_detected()->landed) {
+	if (_navigator->get_vstatus()->arming_state != vehicle_status_s::ARMING_STATE_ARMED &&  //上锁检查
+	    _navigator->get_land_detected()->landed) {   //着陆检查
 
 		// Not setting loiter position if disarmed and landed, instead mark the current
-		// setpoint as invalid and idle (both, just to be sure).
+		// setpoint as invalid and idle (both, just to be sure).  // 设置当前任务为空闲
 
 		_navigator->set_can_loiter_at_sp(false);
 		_navigator->get_position_setpoint_triplet()->current.type = position_setpoint_s::SETPOINT_TYPE_IDLE;
@@ -94,32 +94,32 @@ Loiter::set_loiter_position()
 		return;
 
 	} else if (_loiter_pos_set) {
-		// Already set, nothing to do.
+		// Already set, nothing to do.  // 已经设置过了
 		return;
 	}
 
-	_loiter_pos_set = true;
+	_loiter_pos_set = true;  // 标志位
 
 	// set current mission item to loiter
-	set_loiter_item(&_mission_item, _navigator->get_loiter_min_alt());
+	set_loiter_item(&_mission_item, _navigator->get_loiter_min_alt());  // 设置悬停任务点
 
 	// convert mission item to current setpoint
 	struct position_setpoint_triplet_s *pos_sp_triplet = _navigator->get_position_setpoint_triplet();
 	pos_sp_triplet->current.velocity_valid = false;
 	pos_sp_triplet->previous.valid = false;
 	mission_apply_limitation(_mission_item);
-	mission_item_to_position_setpoint(_mission_item, &pos_sp_triplet->current);
+	mission_item_to_position_setpoint(_mission_item, &pos_sp_triplet->current);  //
 	pos_sp_triplet->next.valid = false;
 
-	_navigator->set_can_loiter_at_sp(pos_sp_triplet->current.type == position_setpoint_s::SETPOINT_TYPE_LOITER);
-	_navigator->set_position_setpoint_triplet_updated();
+	_navigator->set_can_loiter_at_sp(pos_sp_triplet->current.type == position_setpoint_s::SETPOINT_TYPE_LOITER);  // 在目标点盘旋
+	_navigator->set_position_setpoint_triplet_updated();  // 更新该点，并通知
 }
 
 void
 Loiter::reposition()
 {
 	// we can't reposition if we are not armed yet
-	if (_navigator->get_vstatus()->arming_state != vehicle_status_s::ARMING_STATE_ARMED) {
+	if (_navigator->get_vstatus()->arming_state != vehicle_status_s::ARMING_STATE_ARMED) {  //再次上锁检测
 		return;
 	}
 
@@ -131,17 +131,17 @@ Loiter::reposition()
 		// convert mission item to current setpoint
 		struct position_setpoint_triplet_s *pos_sp_triplet = _navigator->get_position_setpoint_triplet();
 		pos_sp_triplet->current.velocity_valid = false;
-		pos_sp_triplet->previous.yaw = _navigator->get_global_position()->yaw;
+		pos_sp_triplet->previous.yaw = _navigator->get_global_position()->yaw;  //将当前值赋给previous
 		pos_sp_triplet->previous.lat = _navigator->get_global_position()->lat;
 		pos_sp_triplet->previous.lon = _navigator->get_global_position()->lon;
 		pos_sp_triplet->previous.alt = _navigator->get_global_position()->alt;
-		memcpy(&pos_sp_triplet->current, &rep->current, sizeof(rep->current));
+		memcpy(&pos_sp_triplet->current, &rep->current, sizeof(rep->current));  //将rep->current点赋给pos_sp_triplet->current
 		pos_sp_triplet->next.valid = false;
 
 		_navigator->set_can_loiter_at_sp(pos_sp_triplet->current.type == position_setpoint_s::SETPOINT_TYPE_LOITER);
 		_navigator->set_position_setpoint_triplet_updated();
 
 		// mark this as done
-		memset(rep, 0, sizeof(*rep));
+		memset(rep, 0, sizeof(*rep));   //清空rep结构体
 	}
 }
