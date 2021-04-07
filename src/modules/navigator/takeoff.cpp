@@ -66,11 +66,11 @@ Takeoff::on_active()
 		_navigator->set_mission_result_updated();
 
 		// set loiter item so position controllers stop doing takeoff logic
-		set_loiter_item(&_mission_item);
+		set_loiter_item(&_mission_item); // 爬升完成，在当前位置悬停
 		struct position_setpoint_triplet_s *pos_sp_triplet = _navigator->get_position_setpoint_triplet();
 		mission_apply_limitation(_mission_item);
-		mission_item_to_position_setpoint(_mission_item, &pos_sp_triplet->current);
-		_navigator->set_position_setpoint_triplet_updated();
+		mission_item_to_position_setpoint(_mission_item, &pos_sp_triplet->current); //将_mission_item结构体的内容赋值给pos_sp_triplet->current
+		_navigator->set_position_setpoint_triplet_updated();  // 通知更新
 	}
 }
 
@@ -95,7 +95,7 @@ Takeoff::set_takeoff_position()
 		abs_altitude = rep->current.alt;
 
 		// If the altitude suggestion is lower than home + minimum clearance, raise it and complain.
-		if (abs_altitude < min_abs_altitude) {
+		if (abs_altitude < min_abs_altitude) {  //Offboard 模式
 			if (abs_altitude < min_abs_altitude - 0.1f) { // don't complain if difference is smaller than 10cm
 				mavlink_log_critical(_navigator->get_mavlink_log_pub(),
 						     "Using minimum takeoff altitude: %.2f m", (double)_navigator->get_takeoff_min_alt());
@@ -132,23 +132,23 @@ Takeoff::set_takeoff_position()
 	pos_sp_triplet->current.yaw_valid = true;
 	pos_sp_triplet->next.valid = false;
 
-	if (rep->current.valid) {
+	if (rep->current.valid) { //
 
 		// Go on and check which changes had been requested
 		if (PX4_ISFINITE(rep->current.yaw)) {
 			pos_sp_triplet->current.yaw = rep->current.yaw;
 		}
 
-		if (PX4_ISFINITE(rep->current.lat) && PX4_ISFINITE(rep->current.lon)) {
+		if (PX4_ISFINITE(rep->current.lat) && PX4_ISFINITE(rep->current.lon)) { //Offboard 模式
 			pos_sp_triplet->current.lat = rep->current.lat;
 			pos_sp_triplet->current.lon = rep->current.lon;
 		}
 
 		// mark this as done
-		memset(rep, 0, sizeof(*rep));
+		memset(rep, 0, sizeof(*rep));  // 清空rep
 	}
 
-	_navigator->set_can_loiter_at_sp(true);
+	_navigator->set_can_loiter_at_sp(true);  //设置在目标点悬停
 
-	_navigator->set_position_setpoint_triplet_updated();
+	_navigator->set_position_setpoint_triplet_updated();  // 更新位置值，供pos_control.cpp使用
 }
