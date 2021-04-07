@@ -63,7 +63,7 @@ Mission::Mission(Navigator *navigator) :
 	MissionBlock(navigator),
 	ModuleParams(navigator)
 {
-}
+}				//任务切换与航点更新
 
 void
 Mission::on_inactive()
@@ -163,7 +163,7 @@ Mission::on_activation()
 	// we already reset the mission items
 	_execution_mode_changed = false;
 
-	set_mission_items();
+	set_mission_items(); //入口函数：
 
 	// unpause triggering if it was paused
 	vehicle_command_s cmd = {};
@@ -209,7 +209,7 @@ Mission::on_active()
 		}
 
 		_execution_mode_changed = false;
-		set_mission_items();
+		set_mission_items();  //第二次调用
 	}
 
 	/* lets check if we reached the current mission item */
@@ -217,7 +217,7 @@ Mission::on_active()
 		/* If we just completed a takeoff which was inserted before the right waypoint,
 		   there is no need to report that we reached it because we didn't. */
 		if (_work_item_type != WORK_ITEM_TYPE_TAKEOFF) {
-			set_mission_item_reached();
+			set_mission_item_reached();  //判断不是起飞状态即为到达航点
 		}
 
 		if (_mission_item.autocontinue) {
@@ -228,12 +228,12 @@ Mission::on_active()
 
 	} else if (_mission_type != MISSION_TYPE_NONE && _param_mis_altmode.get() == MISSION_ALTMODE_FOH) {
 
-		altitude_sp_foh_update();
+		altitude_sp_foh_update(); //高度的一阶平滑
 
 	} else {
 		/* if waypoint position reached allow loiter on the setpoint */
 		if (_waypoint_position_reached && _mission_item.nav_cmd != NAV_CMD_IDLE) {
-			_navigator->set_can_loiter_at_sp(true);
+			_navigator->set_can_loiter_at_sp(true);  //在当前位置悬停
 		}
 	}
 
@@ -331,7 +331,7 @@ Mission::set_execution_mode(const uint8_t mode)
 
 					set_vtol_transition_item(&_mission_item, vtol_vehicle_status_s::VEHICLE_VTOL_STATE_FW);
 
-					position_setpoint_triplet_s *pos_sp_triplet = _navigator->get_position_setpoint_triplet();
+					position_setpoint_triplet_s *pos_sp_triplet = _navigator->get_position_setpoint_triplet(); //读取组合航点信息
 					pos_sp_triplet->previous = pos_sp_triplet->current;
 					generate_waypoint_from_heading(&pos_sp_triplet->current, _mission_item.yaw);
 					_navigator->set_position_setpoint_triplet_updated();
@@ -577,16 +577,16 @@ Mission::set_mission_items()
 	/* reset the altitude foh (first order hold) logic, if altitude foh is enabled (param) a new foh element starts now */
 	_min_current_sp_distance_xy = FLT_MAX;
 
-	/* the home dist check provides user feedback, so we initialize it to this */
+	/* the home dist check provides user feedback, so we initialize it to this */  // 是否往地面站发送了通知
 	bool user_feedback_done = false;
 
-	/* mission item that comes after current if available */
+	/* mission item that comes after current if available */  //创建未来航点结构以及未来航点标志量
 	struct mission_item_s mission_item_next_position;
 	bool has_next_position_item = false;
 
-	work_item_type new_work_item_type = WORK_ITEM_TYPE_DEFAULT;
+	work_item_type new_work_item_type = WORK_ITEM_TYPE_DEFAULT;  //设置为默认值
 
-	if (prepare_mission_items(&_mission_item, &mission_item_next_position, &has_next_position_item)) {
+	if (prepare_mission_items(&_mission_item, &mission_item_next_position, &has_next_position_item)) { //读取航点信息 前两个包含两个任务点的位置信息，第三个判断是否有下一个航点
 		/* if mission type changed, notify */
 		if (_mission_type != MISSION_TYPE_MISSION) {
 			mavlink_log_info(_navigator->get_mavlink_log_pub(),
@@ -599,7 +599,7 @@ Mission::set_mission_items()
 
 	} else {
 		/* no mission available or mission finished, switch to loiter */
-		if (_mission_type != MISSION_TYPE_NONE) {
+		if (_mission_type != MISSION_TYPE_NONE) {  //全部任务完成
 
 			if (_navigator->get_land_detected()->landed) {
 				mavlink_log_info(_navigator->get_mavlink_log_pub(),
@@ -613,7 +613,7 @@ Mission::set_mission_items()
 						 "Mission finished, loitering.");
 
 				/* use last setpoint for loiter */
-				_navigator->set_can_loiter_at_sp(true);
+				_navigator->set_can_loiter_at_sp(true);  //在当前位置悬停---接下来交给position_control
 			}
 
 			user_feedback_done = true;
@@ -628,7 +628,7 @@ Mission::set_mission_items()
 		position_setpoint_triplet_s *pos_sp_triplet = _navigator->get_position_setpoint_triplet();
 		pos_sp_triplet->previous.valid = false;
 		mission_apply_limitation(_mission_item);
-		mission_item_to_position_setpoint(_mission_item, &pos_sp_triplet->current);
+		mission_item_to_position_setpoint(_mission_item, &pos_sp_triplet->current);  //
 		pos_sp_triplet->next.valid = false;
 
 		/* reuse setpoint for LOITER only if it's not IDLE */
@@ -636,7 +636,7 @@ Mission::set_mission_items()
 
 		// set mission finished
 		_navigator->get_mission_result()->finished = true;
-		_navigator->set_mission_result_updated();
+		_navigator->set_mission_result_updated();  //
 
 		if (!user_feedback_done) {
 			/* only tell users that we got no mission if there has not been any
@@ -1164,7 +1164,7 @@ float
 Mission::calculate_takeoff_altitude(struct mission_item_s *mission_item)
 {
 	/* calculate takeoff altitude */
-	float takeoff_alt = get_absolute_altitude_for_item(*mission_item);
+	float takeoff_alt = get_absolute_altitude_for_item(*mission_item);  //获取高度
 
 	/* takeoff to at least MIS_TAKEOFF_ALT above home/ground, even if first waypoint is lower */
 	if (_navigator->get_land_detected()->landed) {
@@ -1391,25 +1391,25 @@ Mission::do_abort_landing()
 }
 
 bool
-Mission::prepare_mission_items(mission_item_s *mission_item,
+Mission::prepare_mission_items(mission_item_s *mission_item,  //读取连续两个点的信息
 			       mission_item_s *next_position_mission_item, bool *has_next_position_item)
 {
 	*has_next_position_item = false;
-	bool first_res = false;
-	int offset = 1;
+	bool first_res = false;  //第一个航点读取成功与否
+	int offset = 1;  // 读取序号
 
 	if (_mission_execution_mode == mission_result_s::MISSION_EXECUTION_MODE_REVERSE) {
 		offset = -1;
 	}
 
-	if (read_mission_item(0, mission_item)) {
+	if (read_mission_item(0, mission_item)) {  //成功读取到第一个任务点
 
 		first_res = true;
 
 		/* trying to find next position mission item */
-		while (read_mission_item(offset, next_position_mission_item)) {
+		while (read_mission_item(offset, next_position_mission_item)) {  // 读取下一个任务点
 
-			if (item_contains_position(*next_position_mission_item)) {
+			if (item_contains_position(*next_position_mission_item)) {  //如果包含位置信息
 				*has_next_position_item = true;
 				break;
 			}
@@ -1424,11 +1424,11 @@ Mission::prepare_mission_items(mission_item_s *mission_item,
 		}
 	}
 
-	return first_res;
+	return first_res;  //返回标志
 }
 
 bool
-Mission::read_mission_item(int offset, struct mission_item_s *mission_item)
+Mission::read_mission_item(int offset, struct mission_item_s *mission_item)  //根据Offset 读取任务点
 {
 	/* select mission */
 	const int current_index = _current_mission_index;
@@ -1444,7 +1444,7 @@ Mission::read_mission_item(int offset, struct mission_item_s *mission_item)
 
 	/* Repeat this several times in case there are several DO JUMPS that we need to follow along, however, after
 	 * 10 iterations we have to assume that the DO JUMPS are probably cycling and give up. */
-	for (int i = 0; i < 10; i++) {
+	for (int i = 0; i < 10; i++) {  // 检查是否已经读取到了最后一个航点，向地面站发送消息
 		if (*mission_index_ptr < 0 || *mission_index_ptr >= (int)_mission.count) {
 			/* mission item index out of bounds - if they are equal, we just reached the end */
 			if ((*mission_index_ptr != (int)_mission.count) && (*mission_index_ptr != -1)) {
@@ -1460,14 +1460,14 @@ Mission::read_mission_item(int offset, struct mission_item_s *mission_item)
 		/* read mission item to temp storage first to not overwrite current mission item if data damaged */
 		struct mission_item_s mission_item_tmp;
 
-		/* read mission item from datamanager */
+		/* read mission item from datamanager */ //从SD卡中读取任务点信息
 		if (dm_read(dm_item, *mission_index_ptr, &mission_item_tmp, len) != len) {
 			/* not supposed to happen unless the datamanager can't access the SD card, etc. */
 			mavlink_log_critical(_navigator->get_mavlink_log_pub(), "Waypoint could not be read.");
 			return false;
 		}
 
-		/* check for DO_JUMP item, and whether it hasn't not already been repeated enough times */
+		/* check for DO_JUMP item, and whether it hasn't not already been repeated enough times */  //检查是否是JUMP航点
 		if (mission_item_tmp.nav_cmd == NAV_CMD_DO_JUMP) {
 			const bool execute_jumps = _mission_execution_mode == mission_result_s::MISSION_EXECUTION_MODE_NORMAL;
 
