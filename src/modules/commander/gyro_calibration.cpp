@@ -49,14 +49,14 @@
 #include <px4_platform_common/time.h>
 
 #include <drivers/drv_hrt.h>
-#include <lib/sensor_calibration/Gyroscope.hpp>
-#include <lib/sensor_calibration/Utilities.hpp>
+#include <lib/mathlib/math/filter/MedianFilter.hpp>
 #include <lib/mathlib/mathlib.h>
 #include <lib/parameters/param.h>
+#include <lib/sensor_calibration/Gyroscope.hpp>
+#include <lib/sensor_calibration/Utilities.hpp>
 #include <lib/systemlib/mavlink_log.h>
 #include <uORB/Subscription.hpp>
 #include <uORB/SubscriptionBlocking.hpp>
-#include <uORB/topics/sensor_correction.h>
 #include <uORB/topics/sensor_gyro.h>
 
 static constexpr char sensor_name[] {"gyro"};
@@ -72,21 +72,8 @@ struct gyro_worker_data_t {
 
 	Vector3f offset[MAX_GYROS] {};
 
-	static constexpr int last_num_samples = 9; ///< number of samples for the motion detection median filter
-	float last_sample_0_x[last_num_samples];
-	float last_sample_0_y[last_num_samples];
-	float last_sample_0_z[last_num_samples];
-	int last_sample_0_idx;
+	math::MedianFilter<float, 9> filter[3] {};
 };
-
-static int float_cmp(const void *elem1, const void *elem2)
-{
-	if (*(const float *)elem1 < * (const float *)elem2) {
-		return -1;
-	}
-
-	return *(const float *)elem1 > *(const float *)elem2;
-}
 
 static calibrate_return gyro_calibration_worker(gyro_worker_data_t &worker_data)
 {
@@ -95,20 +82,12 @@ static calibrate_return gyro_calibration_worker(gyro_worker_data_t &worker_data)
 	static constexpr unsigned CALIBRATION_COUNT = 250;
 	unsigned poll_errcount = 0;
 
-	uORB::Subscription sensor_correction_sub{ORB_ID(sensor_correction)};
-	sensor_correction_s sensor_correction{};
-
 	uORB::SubscriptionBlocking<sensor_gyro_s> gyro_sub[MAX_GYROS] {
 		{ORB_ID(sensor_gyro), 0, 0},
 		{ORB_ID(sensor_gyro), 0, 1},
 		{ORB_ID(sensor_gyro), 0, 2},
 		{ORB_ID(sensor_gyro), 0, 3},
 	};
-
-	memset(&worker_data.last_sample_0_x, 0, sizeof(worker_data.last_sample_0_x));
-	memset(&worker_data.last_sample_0_y, 0, sizeof(worker_data.last_sample_0_y));
-	memset(&worker_data.last_sample_0_z, 0, sizeof(worker_data.last_sample_0_z));
-	worker_data.last_sample_0_idx = 0;
 
 	/* use slowest gyro to pace, but count correctly per-gyro for statistics */
 	unsigned slow_count = 0;
@@ -132,40 +111,16 @@ static calibrate_return gyro_calibration_worker(gyro_worker_data_t &worker_data)
 					sensor_gyro_s gyro_report;
 
 					while (gyro_sub[gyro_index].update(&gyro_report)) {
+						// fetch optional thermal offset corrections in sensor frame
+						const Vector3f &thermal_offset{worker_data.calibrations[gyro_index].thermal_offset()};
 
-						// fetch optional thermal offset corrections in sensor/board frame
-						Vector3f offset{0, 0, 0};
-						sensor_correction_sub.update(&sensor_correction);
-
-						if (sensor_correction.timestamp > 0 && gyro_report.device_id != 0) {
-							for (uint8_t correction_index = 0; correction_index < MAX_GYROS; correction_index++) {
-								if (sensor_correction.gyro_device_ids[correction_index] == gyro_report.device_id) {
-									switch (correction_index) {
-									case 0:
-										offset = Vector3f{sensor_correction.gyro_offset_0};
-										break;
-									case 1:
-										offset = Vector3f{sensor_correction.gyro_offset_1};
-										break;
-									case 2:
-										offset = Vector3f{sensor_correction.gyro_offset_2};
-										break;
-									case 3:
-										offset = Vector3f{sensor_correction.gyro_offset_3};
-										break;
-									}
-								}
-							}
-						}
-
-						worker_data.offset[gyro_index] += Vector3f{gyro_report.x, gyro_report.y, gyro_report.z} - offset;
+						worker_data.offset[gyro_index] += Vector3f{gyro_report.x, gyro_report.y, gyro_report.z} - thermal_offset;
 						calibration_counter[gyro_index]++;
 
 						if (gyro_index == 0) {
-							worker_data.last_sample_0_x[worker_data.last_sample_0_idx] = gyro_report.x - offset(0);
-							worker_data.last_sample_0_y[worker_data.last_sample_0_idx] = gyro_report.y - offset(1);
-							worker_data.last_sample_0_z[worker_data.last_sample_0_idx] = gyro_report.z - offset(2);
-							worker_data.last_sample_0_idx = (worker_data.last_sample_0_idx + 1) % gyro_worker_data_t::last_num_samples;
+							worker_data.filter[0].insert(gyro_report.x - thermal_offset(0));
+							worker_data.filter[1].insert(gyro_report.y - thermal_offset(1));
+							worker_data.filter[2].insert(gyro_report.z - thermal_offset(2));
 						}
 					}
 
@@ -257,13 +212,9 @@ int do_gyro_calibration(orb_advert_t *mavlink_log_pub)
 
 		} else {
 			/* check offsets using a median filter */
-			qsort(worker_data.last_sample_0_x, gyro_worker_data_t::last_num_samples, sizeof(float), float_cmp);
-			qsort(worker_data.last_sample_0_y, gyro_worker_data_t::last_num_samples, sizeof(float), float_cmp);
-			qsort(worker_data.last_sample_0_z, gyro_worker_data_t::last_num_samples, sizeof(float), float_cmp);
-
-			float xdiff = worker_data.last_sample_0_x[gyro_worker_data_t::last_num_samples / 2] - worker_data.offset[0](0);
-			float ydiff = worker_data.last_sample_0_y[gyro_worker_data_t::last_num_samples / 2] - worker_data.offset[0](1);
-			float zdiff = worker_data.last_sample_0_z[gyro_worker_data_t::last_num_samples / 2] - worker_data.offset[0](2);
+			float xdiff = worker_data.filter[0].median() - worker_data.offset[0](0);
+			float ydiff = worker_data.filter[1].median() - worker_data.offset[0](1);
+			float zdiff = worker_data.filter[2].median() - worker_data.offset[0](2);
 
 			/* maximum allowable calibration error */
 			static constexpr float maxoff = math::radians(0.6f);

@@ -82,6 +82,8 @@ UavcanNode::UavcanNode(uavcan::ICanDriver &can_driver, uavcan::ISystemClock &sys
 	_node(can_driver, system_clock, _pool_allocator),
 	_esc_controller(_node),
 	_hardpoint_controller(_node),
+	_beep_controller(_node),
+	_safety_state_controller(_node),
 	_rgbled_controller(_node),
 	_time_sync_master(_node),
 	_time_sync_slave(_node),
@@ -622,6 +624,18 @@ UavcanNode::init(uavcan::NodeID node_id, UAVCAN_DRIVER::BusEvent &bus_events)
 		return ret;
 	}
 
+	ret = _beep_controller.init();
+
+	if (ret < 0) {
+		return ret;
+	}
+
+	ret = _safety_state_controller.init();
+
+	if (ret < 0) {
+		return ret;
+	}
+
 	ret = _rgbled_controller.init();
 
 	if (ret < 0) {
@@ -639,7 +653,7 @@ UavcanNode::init(uavcan::NodeID node_id, UAVCAN_DRIVER::BusEvent &bus_events)
 			return ret;
 		}
 
-		PX4_INFO("sensor bridge '%s' init ok", br->get_name());
+		PX4_DEBUG("sensor bridge '%s' init ok", br->get_name());
 	}
 
 	_mixing_interface.mixingOutput().setAllDisarmedValues(UavcanEscController::DISARMED_OUTPUT_VALUE);
