@@ -60,20 +60,26 @@
 #include <uORB/topics/vehicle_odometry.h>
 
 extern "C" __EXPORT int attitude_estimator_q_main(int argc, char *argv[]);
+//这是main函数的申明，nuttx的main函数和普通单片机不一样，它的命名格式是“应用程序名称”+“_”+“main”。
+//在NUTTX系统上注册的函数，在执行的时候回启动或者关闭这个模块（应用程序），还能返回模块的工作状态。
 
 using matrix::Dcmf;
 using matrix::Eulerf;
 using matrix::Quatf;
 using matrix::Vector3f;
 using matrix::wrap_pi;
+//用到了math命名空间下的Dcm，Euler，Quat,Vector3类，因为姿态估计涉及到向量，矩阵的运算，以及四元数。
 
 class AttitudeEstimatorQ;
+//这是类的前向申明，可以在类没有实现的时候定义类的指针对象。
 
 namespace attitude_estimator_q
 {
 AttitudeEstimatorQ *instance;
 } // namespace attitude_estimator_q
-
+//定义类的指针对象instance，它属于命名空间attitude_estimator_q，是全局变量。
+//这里的命名空间很关键，因为别的模块也会定义这样的全局变量，但是不同模块可能不是一个人写的，
+//变量有冲突的情况下用前缀attitude_estimator_q::就可以解决。
 
 class AttitudeEstimatorQ
 {
@@ -82,6 +88,7 @@ public:
 	 * Constructor
 	 */
 	AttitudeEstimatorQ();
+	//构造函数中得到该模块需要用到的参数的句柄，给变量赋初值。
 
 	/**
 	 * Destructor, also kills task.
@@ -94,10 +101,13 @@ public:
 	 * @return		OK on success.
 	 */
 	int		start();
+	//函数功能：为attitude_estimator任务设置优先级，分配堆栈空间，指定服务函数。
 
 	static int	task_main_trampoline(int argc, char *argv[]);
+	//attitude_estimator任务服务函数，它只调用task_main函数。
 
 	void		task_main();
+	//被attitude_estimator任务服务函数调用
 
 private:
 	const float _eo_max_std_dev = 100.0f;		/**< Maximum permissible standard deviation for estimated orientation */
@@ -107,6 +117,7 @@ private:
 	bool		_task_should_exit = false;	/**< if true, task should exit */
 	int		_control_task = -1;		/**< task handle for task */
 
+	//将要订阅的uORB消息
 	int		_sensors_sub = -1;
 
 	uORB::Subscription		_parameter_update_sub{ORB_ID(parameter_update)};
@@ -115,6 +126,7 @@ private:
 	uORB::Subscription		_mocap_odom_sub{ORB_ID(vehicle_mocap_odometry)};
 	uORB::Subscription		_magnetometer_sub{ORB_ID(vehicle_magnetometer)};
 
+	//将要发布的uORB消息
 	uORB::Publication<vehicle_attitude_s>	_att_pub{ORB_ID(vehicle_attitude)};
 
 	struct {
@@ -130,6 +142,7 @@ private:
 		param_t	has_mag;
 	} _params_handles{};		/**< handles for interesting parameters */
 
+	//可以配置的参数
 	float		_w_accel = 0.0f;
 	float		_w_mag = 0.0f;
 	float		_w_ext_hdg = 0.0f;
@@ -140,6 +153,7 @@ private:
 	float		_bias_max = 0.0f;
 	int32_t		_ext_hdg_mode = 0;
 
+	//从uORB获取到的传感器原始值
 	Vector3f	_gyro;
 	Vector3f	_accel;
 	Vector3f	_mag;
@@ -147,6 +161,7 @@ private:
 	Vector3f	_vision_hdg;
 	Vector3f	_mocap_hdg;
 
+	//解算结果
 	Quatf		_q;
 	Vector3f	_rates;
 	Vector3f	_gyro_bias;
@@ -160,13 +175,13 @@ private:
 	bool		_data_good = false;
 	bool		_ext_hdg_good = false;
 
-	void update_parameters(bool force);
+	void update_parameters(bool force); //是否进行参数更新
 
 	int update_subscriptions();
 
-	bool init();
+	bool init(); //变量初始化
 
-	bool update(float dt);
+	bool update(float dt); //关键的解算算法在此处，它在task_main中的while循环中被调用
 
 	// Update magnetic declination (in rads) immediately changing yaw rotation
 	void update_mag_declination(float new_declination);
@@ -256,7 +271,7 @@ void AttitudeEstimatorQ::task_main()
 {
 	_sensors_sub = orb_subscribe(ORB_ID(sensor_combined));
 
-	update_parameters(true);
+	update_parameters(true); //更新参数
 
 	hrt_abstime last_time = 0;
 
@@ -271,12 +286,12 @@ void AttitudeEstimatorQ::task_main()
 			// Poll error, sleep and try again
 			px4_usleep(10000);
 			PX4_WARN("POLL ERROR");
-			continue;
+			continue; //等待有sensor_combined消息传来，否则继续等待。
 
 		} else if (ret == 0) {
 			// Poll timeout, do nothing
 			PX4_WARN("POLL TIMEOUT");
-			continue;
+			continue; //等待有sensor_combined消息传来，否则继续等待。
 		}
 
 		update_parameters(false);
@@ -327,7 +342,7 @@ void AttitudeEstimatorQ::task_main()
 		// Update vision and motion capture heading
 		_ext_hdg_good = false;
 
-		if (_vision_odom_sub.updated()) {
+		if (_vision_odom_sub.updated()) { //更新视觉和动作捕捉的消息
 			vehicle_odometry_s vision;
 
 			if (_vision_odom_sub.copy(&vision)) {
@@ -422,8 +437,8 @@ void AttitudeEstimatorQ::task_main()
 		const float dt = math::constrain((now  - last_time) / 1e6f, _dt_min, _dt_max);
 		last_time = now;
 
-		if (update(dt)) {
-			vehicle_attitude_s att = {};
+		if (update(dt)) {  //关键的解算算法在这个函数中
+			vehicle_attitude_s att = {};  //打包将要发布的消息vehicle_attitude
 			att.timestamp = sensors.timestamp;
 			_q.copyTo(att.q);
 
@@ -432,7 +447,7 @@ void AttitudeEstimatorQ::task_main()
 		}
 	}
 
-	orb_unsubscribe(_sensors_sub);
+	orb_unsubscribe(_sensors_sub);  //任务结束后取消订阅这些消息
 }
 
 void AttitudeEstimatorQ::update_parameters(bool force)
