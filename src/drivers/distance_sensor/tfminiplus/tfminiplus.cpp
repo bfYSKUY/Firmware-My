@@ -1,46 +1,4 @@
-/****************************************************************************
- *
- *   Copyright (c) 2017-2018 PX4 Development Team. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- *
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in
- *    the documentation and/or other materials provided with the
- *    distribution.
- * 3. Neither the name PX4 nor the names of its contributors may be
- *    used to endorse or promote products derived from this software
- *    without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
- * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
- * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
- * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- *
- ****************************************************************************/
 
-/**
- * @file tfmini.cpp
- * @author Lorenz Meier <lm@inf.ethz.ch>
- * @author Greg Hulands
- * @author Ayush Gaud <ayush.gaud@gmail.com>
- * @author Christoph Tobler <christoph@px4.io>
- * @author Mohammed Kabir <mhkabir@mit.edu>
- *
- * Driver for the Benewake TFmini laser rangefinder series
- */
 
 #include <px4_config.h>
 #include <px4_workqueue.h>
@@ -78,7 +36,7 @@
 
 #include <board_config.h>
 
-#include "tfmini_parser.h"
+#include "tfminiplus_parser.h"
 
 /* Configuration Constants */
 
@@ -86,11 +44,11 @@
 # error This requires CONFIG_SCHED_WORKQUEUE.
 #endif
 
-class TFMINI : public cdev::CDev
+class TFMINIPLUS : public cdev::CDev
 {
 public:
-	TFMINI(const char *port, uint8_t rotation = distance_sensor_s::ROTATION_DOWNWARD_FACING);
-	virtual ~TFMINI();
+	TFMINIPLUS(const char *port, uint8_t rotation = distance_sensor_s::ROTATION_DOWNWARD_FACING);
+	virtual ~TFMINIPLUS();
 
 	virtual int init();
 
@@ -115,7 +73,7 @@ private:
 	int                      _fd;
 	char                     _linebuf[10];
 	unsigned                 _linebuf_index;
-	enum TFMINI_PARSE_STATE  _parse_state;
+	enum TFMINIPLUS_PARSE_STATE  _parse_state;
 
 	hrt_abstime              _last_read;
 
@@ -139,8 +97,8 @@ private:
 
 	/**
 	* Set the min and max distance thresholds if you want the end points of the sensors
-	* range to be brought in at all, otherwise it will use the defaults TFMINI_MIN_DISTANCE
-	* and TFMINI_MAX_DISTANCE
+	* range to be brought in at all, otherwise it will use the defaults TFMINIPLUS_MIN_DISTANCE
+	* and TFMINIPLUS_MAX_DISTANCE
 	*/
 	void				set_minimum_distance(float min);
 	void				set_maximum_distance(float max);
@@ -168,9 +126,9 @@ private:
 /*
  * Driver 'main' command.
  */
-extern "C" __EXPORT int tfmini_main(int argc, char *argv[]);
+extern "C" __EXPORT int tfminiplus_main(int argc, char *argv[]);
 
-TFMINI::TFMINI(const char *port, uint8_t rotation) :
+TFMINIPLUS::TFMINIPLUS(const char *port, uint8_t rotation) :
 	CDev(RANGE_FINDER0_DEVICE_PATH),
 	_rotation(rotation),
 	_min_distance(0.30f),
@@ -181,13 +139,13 @@ TFMINI::TFMINI(const char *port, uint8_t rotation) :
 	_collect_phase(false),
 	_fd(-1),
 	_linebuf_index(0),
-	_parse_state(TFMINI_PARSE_STATE0_UNSYNC),
+	_parse_state(TFMINIPLUS_PARSE_STATE0_UNSYNC),
 	_last_read(0),
 	_class_instance(-1),
 	_orb_class_instance(-1),
 	_distance_sensor_topic(nullptr),
-	_sample_perf(perf_alloc(PC_ELAPSED, "tfmini_read")),
-	_comms_errors(perf_alloc(PC_COUNT, "tfmini_com_err"))
+	_sample_perf(perf_alloc(PC_ELAPSED, "tfminiplus_read")),
+	_comms_errors(perf_alloc(PC_COUNT, "tfminiplus_com_err"))
 {
 	/* store port name */
 	strncpy(_port, port, sizeof(_port) - 1);
@@ -195,7 +153,7 @@ TFMINI::TFMINI(const char *port, uint8_t rotation) :
 	_port[sizeof(_port) - 1] = '\0';
 }
 
-TFMINI::~TFMINI()
+TFMINIPLUS::~TFMINIPLUS()
 {
 	/* make sure we are truly inactive */
 	stop();
@@ -214,12 +172,12 @@ TFMINI::~TFMINI()
 }
 
 int
-TFMINI::init()
+TFMINIPLUS::init()
 {
 	int32_t hw_model = 1; // only one model so far...
 
 	switch (hw_model) {
-	case 1: /* TFMINI (12m, 100 Hz)*/
+	case 1: /* TFMINIPLUS (12m, 100 Hz)*/
 		_min_distance = 0.3f;
 		_max_distance = 12.0f;
 		_conversion_interval = 9000;
@@ -332,31 +290,31 @@ TFMINI::init()
 }
 
 void
-TFMINI::set_minimum_distance(float min)
+TFMINIPLUS::set_minimum_distance(float min)
 {
 	_min_distance = min;
 }
 
 void
-TFMINI::set_maximum_distance(float max)
+TFMINIPLUS::set_maximum_distance(float max)
 {
 	_max_distance = max;
 }
 
 float
-TFMINI::get_minimum_distance()
+TFMINIPLUS::get_minimum_distance()
 {
 	return _min_distance;
 }
 
 float
-TFMINI::get_maximum_distance()
+TFMINIPLUS::get_maximum_distance()
 {
 	return _max_distance;
 }
 
 int
-TFMINI::ioctl(device::file_t *filp, int cmd, unsigned long arg)
+TFMINIPLUS::ioctl(device::file_t *filp, int cmd, unsigned long arg)
 {
 	switch (cmd) {
 
@@ -417,7 +375,7 @@ TFMINI::ioctl(device::file_t *filp, int cmd, unsigned long arg)
 }
 
 ssize_t
-TFMINI::read(device::file_t *filp, char *buffer, size_t buflen)
+TFMINIPLUS::read(device::file_t *filp, char *buffer, size_t buflen)
 {
 	unsigned count = buflen / sizeof(struct distance_sensor_s);
 	struct distance_sensor_s *rbuf = reinterpret_cast<struct distance_sensor_s *>(buffer);
@@ -471,7 +429,7 @@ TFMINI::read(device::file_t *filp, char *buffer, size_t buflen)
 }
 
 int
-TFMINI::collect()
+TFMINIPLUS::collect()
 {
 	perf_begin(_sample_perf);
 
@@ -518,7 +476,8 @@ TFMINI::collect()
 
 		/* parse buffer */
 		for (int i = 0; i < ret; i++) {
-			tfmini_parse(readbuf[i], _linebuf, &_linebuf_index, &_parse_state, &distance_m);
+			// tfminiplus_parse(readbuf[i], _linebuf, &_linebuf_index, &_parse_state, &distance_m); ///自定义修改
+			tfminiplus_reading(readbuf[i], _linebuf, &_linebuf_index, &distance_m); ///自定义修改
 		}
 
 		/* bytes left to parse */
@@ -560,32 +519,32 @@ TFMINI::collect()
 }
 
 void
-TFMINI::start()
+TFMINIPLUS::start()
 {
 	/* reset the report ring and state machine */
 	_collect_phase = false;
 	_reports->flush();
 
 	/* schedule a cycle to start things */
-	work_queue(HPWORK, &_work, (worker_t)&TFMINI::cycle_trampoline, this, 1);
+	work_queue(HPWORK, &_work, (worker_t)&TFMINIPLUS::cycle_trampoline, this, 1);
 }
 
 void
-TFMINI::stop()
+TFMINIPLUS::stop()
 {
 	work_cancel(HPWORK, &_work);
 }
 
 void
-TFMINI::cycle_trampoline(void *arg)
+TFMINIPLUS::cycle_trampoline(void *arg)
 {
-	TFMINI *dev = (TFMINI *)arg;
+	TFMINIPLUS *dev = (TFMINIPLUS *)arg;
 
 	dev->cycle();
 }
 
 void
-TFMINI::cycle()
+TFMINIPLUS::cycle()
 {
 	/* fds initialized? */
 	if (_fd < 0) {
@@ -601,7 +560,7 @@ TFMINI::cycle()
 
 		if (collect_ret == -EAGAIN) {
 			/* reschedule to grab the missing bits, time to transmit 9 bytes @ 115200 bps */
-			work_queue(HPWORK,&_work,(worker_t)&TFMINI::cycle_trampoline,this,USEC2TICK(87 * 9));
+			work_queue(HPWORK,&_work,(worker_t)&TFMINIPLUS::cycle_trampoline,this,USEC2TICK(87 * 9));
 			return;
 		}
 
@@ -614,7 +573,7 @@ TFMINI::cycle()
 		if (_measure_ticks > USEC2TICK(_conversion_interval)) {
 
 			/* schedule a fresh cycle call when we are ready to measure again */
-			work_queue(HPWORK,&_work,(worker_t)&TFMINI::cycle_trampoline,this,_measure_ticks - USEC2TICK(_conversion_interval));
+			work_queue(HPWORK,&_work,(worker_t)&TFMINIPLUS::cycle_trampoline,this,_measure_ticks - USEC2TICK(_conversion_interval));
 			return;
 		}
 	}
@@ -623,11 +582,11 @@ TFMINI::cycle()
 	_collect_phase = true;
 
 	/* schedule a fresh cycle call when the measurement is done */
-	work_queue(HPWORK,&_work,(worker_t)&TFMINI::cycle_trampoline,this,USEC2TICK(_conversion_interval));
+	work_queue(HPWORK,&_work,(worker_t)&TFMINIPLUS::cycle_trampoline,this,USEC2TICK(_conversion_interval));
 }
 
 void
-TFMINI::print_info()
+TFMINIPLUS::print_info()
 {
 	printf("Using port '%s'\n", _port);
 	perf_print_counter(_sample_perf);
@@ -639,10 +598,10 @@ TFMINI::print_info()
 /**
  * Local functions in support of the shell command.
  */
-namespace tfmini
+namespace tfminiplus
 {
 
-TFMINI	*g_dev;
+TFMINIPLUS	*g_dev;
 
 int start(const char *port, uint8_t rotation);
 int stop();
@@ -664,7 +623,7 @@ start(const char *port, uint8_t rotation)
 	}
 
 	/* create the driver */
-	g_dev = new TFMINI(port, rotation);
+	g_dev = new TFMINIPLUS(port, rotation);
 
 	if (g_dev == nullptr) {
 		goto fail;
@@ -732,7 +691,7 @@ test()
 	int fd = px4_open(RANGE_FINDER0_DEVICE_PATH, O_RDONLY);
 
 	if (fd < 0) {
-		PX4_ERR("%s open failed (try 'tfmini start' if the driver is not running", RANGE_FINDER0_DEVICE_PATH);
+		PX4_ERR("%s open failed (try 'tfminiplus start' if the driver is not running", RANGE_FINDER0_DEVICE_PATH);
 		return 1;
 	}
 
@@ -815,21 +774,21 @@ usage()
 		R"DESCR_STR(
 ### Description
 
-Serial bus driver for the Benewake TFmini LiDAR.
+Serial bus driver for the Benewake TFminiPlus LiDAR.
 
-Most boards are configured to enable/start the driver on a specified UART using the SENS_TFMINI_CFG parameter.
+Most boards are configured to enable/start the driver on a specified UART using the SENS_TFMINIP_CFG parameter.
 
-Setup/usage information: https://docs.px4.io/en/sensor/tfmini.html
+Setup/usage information: https://docs.px4.io/en/sensor/tfminiplus.html
 
 ### Examples
 
 Attempt to start driver on a specified serial device.
-$ tfmini start -d /dev/ttyS1
+$ tfminiplus start -d /dev/ttyS1
 Stop driver
-$ tfmini stop
+$ tfminiplus stop
 )DESCR_STR");
 
-	PRINT_MODULE_USAGE_NAME("tfmini", "driver");
+	PRINT_MODULE_USAGE_NAME("tfminiplus", "driver");
 	PRINT_MODULE_USAGE_SUBCATEGORY("distance_sensor");
 	PRINT_MODULE_USAGE_COMMAND_DESCR("start","Start driver");
 	PRINT_MODULE_USAGE_PARAM_STRING('d', nullptr, nullptr, "Serial device", false);
@@ -842,7 +801,7 @@ $ tfmini stop
 } // namespace
 
 int
-tfmini_main(int argc, char *argv[])
+tfminiplus_main(int argc, char *argv[])
 {
 	int ch;
 	uint8_t rotation = distance_sensor_s::ROTATION_DOWNWARD_FACING;
@@ -875,11 +834,11 @@ tfmini_main(int argc, char *argv[])
 	 */
 	if (!strcmp(argv[myoptind], "start")) {
 		if (strcmp(device_path, "") != 0) {
-			return tfmini::start(device_path, rotation);
+			return tfminiplus::start(device_path, rotation);
 
 		} else {
 			PX4_WARN("Please specify device path!");
-			tfmini::usage();
+			tfminiplus::usage();
 			return -1;
 		}
 	}
@@ -888,26 +847,26 @@ tfmini_main(int argc, char *argv[])
 	 * Stop the driver
 	 */
 	if (!strcmp(argv[myoptind], "stop")) {
-		return tfmini::stop();
+		return tfminiplus::stop();
 	}
 
 	/*
 	 * Test the driver/device.
 	 */
 	if (!strcmp(argv[myoptind], "test")) {
-		return tfmini::test();
+		return tfminiplus::test();
 	}
 
 	/*
 	 * Print driver information.
 	 */
 	if (!strcmp(argv[myoptind], "info") || !strcmp(argv[myoptind], "status")) {
-		tfmini::info();
+		tfminiplus::info();
 		return 0;
 	}
 
 out_error:
 	PX4_ERR("unrecognized command");
-        tfmini::usage();
+        tfminiplus::usage();
 	return -1;
 }
