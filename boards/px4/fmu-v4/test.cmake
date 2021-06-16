@@ -49,6 +49,8 @@ px4_add_board(
 		roboclaw
 		rpm
 		safety_button
+		smart_battery/batmon
+		tap_esc
 		telemetry # all available telemetry drivers
 		test_ppm
 		tone_alarm
@@ -122,7 +124,7 @@ px4_add_board(
 		work_queue
 	EXAMPLES
 		fake_gps
-		fake_gyro
+		fake_imu
 		fake_magnetometer
 		fixedwing_control # Tutorial code from https://px4.io/dev/example_fixedwing_control
 		hello

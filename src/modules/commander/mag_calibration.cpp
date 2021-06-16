@@ -467,6 +467,18 @@ static calibrate_return mag_calibration_worker(detect_orientation_return orienta
 
 calibrate_return mag_calibrate_all(orb_advert_t *mavlink_log_pub, int32_t cal_mask)
 {
+	// We should not try to subscribe if the topic doesn't actually exist and can be counted.
+	const unsigned orb_mag_count = orb_group_count(ORB_ID(sensor_mag));
+
+	// Warn that we will not calibrate more than MAX_GYROS gyroscopes
+	if (orb_mag_count > MAX_MAGS) {
+		calibration_log_critical(mavlink_log_pub, "Detected %u mags, but will calibrate only %u", orb_mag_count, MAX_MAGS);
+
+	} else if (orb_mag_count < 1) {
+		calibration_log_critical(mavlink_log_pub, "No mags found");
+		return calibrate_return_error;
+	}
+
 	calibrate_return result = calibrate_return_ok;
 
 	mag_worker_data_t worker_data{};
@@ -885,22 +897,19 @@ calibrate_return mag_calibrate_all(orb_advert_t *mavlink_log_pub, int32_t cal_ma
 					current_cal.set_offdiagonal(offdiag[cur_mag]);
 				}
 
+				current_cal.set_calibration_index(cur_mag);
+
 				current_cal.PrintStatus();
 
-			} else {
-				current_cal.Reset();
-			}
+				if (current_cal.ParametersSave()) {
+					param_save = true;
+					failed = false;
 
-			current_cal.set_calibration_index(cur_mag);
-
-			if (current_cal.ParametersSave()) {
-				param_save = true;
-				failed = false;
-
-			} else {
-				failed = true;
-				calibration_log_critical(mavlink_log_pub, "calibration save failed");
-				break;
+				} else {
+					failed = true;
+					calibration_log_critical(mavlink_log_pub, "calibration save failed");
+					break;
+				}
 			}
 		}
 
@@ -988,7 +997,7 @@ int do_mag_calibration_quick(orb_advert_t *mavlink_log_pub, float heading_radian
 			sensor_mag_s mag{};
 			mag_sub.copy(&mag);
 
-			if (mag_sub.advertised() && (mag.timestamp != 0)) {
+			if (mag_sub.advertised() && (mag.timestamp != 0) && (mag.device_id != 0)) {
 
 				calibration::Magnetometer cal{mag.device_id, mag.is_external};
 

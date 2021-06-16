@@ -94,7 +94,8 @@ hrt_abstime Mavlink::_first_start_time = {0};
 bool Mavlink::_boot_complete = false;
 
 Mavlink::Mavlink() :
-	ModuleParams(nullptr)
+	ModuleParams(nullptr),
+	_receiver(this)
 {
 	// initialise parameter cache
 	mavlink_update_parameters();
@@ -117,7 +118,7 @@ Mavlink::Mavlink() :
 	}
 
 	// ensure topic exists, otherwise we might lose first queued commands
-	if (!orb_exists(ORB_ID(vehicle_command), 0)) {
+	if (orb_exists(ORB_ID(vehicle_command), 0) == PX4_ERROR) {
 		orb_advertise_queue(ORB_ID(vehicle_command), nullptr, vehicle_command_s::ORB_QUEUE_LENGTH);
 	}
 
@@ -144,6 +145,10 @@ Mavlink::~Mavlink()
 				break;
 			}
 		} while (_task_running);
+	}
+
+	if (_instance_id >= 0) {
+		mavlink_module_instances[_instance_id] = nullptr;
 	}
 
 	perf_free(_loop_perf);
@@ -388,11 +393,15 @@ Mavlink::forward_message(const mavlink_message_t *msg, Mavlink *self)
 			if (meta) {
 				// Extract target system and target component if set
 				if (meta->flags & MAV_MSG_ENTRY_FLAG_HAVE_TARGET_SYSTEM) {
-					target_system_id = (_MAV_PAYLOAD(msg))[meta->target_system_ofs];
+					if (meta->target_system_ofs < msg->len) {
+						target_system_id = (_MAV_PAYLOAD(msg))[meta->target_system_ofs];
+					}
 				}
 
 				if (meta->flags & MAV_MSG_ENTRY_FLAG_HAVE_TARGET_COMPONENT) {
-					target_component_id = (_MAV_PAYLOAD(msg))[meta->target_component_ofs];
+					if (meta->target_component_ofs < msg->len) {
+						target_component_id = (_MAV_PAYLOAD(msg))[meta->target_component_ofs];
+					}
 				}
 			}
 
@@ -1212,9 +1221,12 @@ Mavlink::configure_stream(const char *stream_name, const float rate)
 	}
 
 	/* if we reach here, the stream list does not contain the stream */
+#if defined(CONSTRAINED_FLASH) // flash constrained target's don't include all streams
+	return PX4_OK;
+#else
 	PX4_WARN("stream %s not found", stream_name);
-
 	return PX4_ERROR;
+#endif
 }
 
 void
@@ -2229,8 +2241,7 @@ Mavlink::task_main(int argc, char *argv[])
 		send_autopilot_capabilities();
 	}
 
-	/* start the MAVLink receiver last to avoid a race */
-	MavlinkReceiver::receive_start(&_receive_thread, this);
+	_receiver.start();
 
 	_mavlink_start_time = hrt_absolute_time();
 
@@ -2417,10 +2428,10 @@ Mavlink::task_main(int argc, char *argv[])
 
 		/* check for ulog streaming messages */
 		if (_mavlink_ulog) {
-			if (_mavlink_ulog_stop_requested) {
+			if (_mavlink_ulog_stop_requested.load()) {
 				_mavlink_ulog->stop();
 				_mavlink_ulog = nullptr;
-				_mavlink_ulog_stop_requested = false;
+				_mavlink_ulog_stop_requested.store(false);
 
 			} else {
 				if (cmd_logging_start_acknowledgement) {
@@ -2513,8 +2524,7 @@ Mavlink::task_main(int argc, char *argv[])
 		perf_end(_loop_perf);
 	}
 
-	/* first wait for threads to complete before tearing down anything */
-	pthread_join(_receive_thread, nullptr);
+	_receiver.stop();
 
 	delete _subscribe_to_stream;
 	_subscribe_to_stream = nullptr;
@@ -2543,6 +2553,8 @@ Mavlink::task_main(int argc, char *argv[])
 	}
 
 	pthread_mutex_destroy(&_send_mutex);
+
+	_task_running = false;
 
 	PX4_INFO("exiting channel %i", (int)_channel);
 
@@ -2815,6 +2827,7 @@ Mavlink::display_status()
 	printf("\t  tx rate max: %i B/s\n", _datarate);
 	printf("\t  rx: %.1f B/s\n", (double)_tstatus.rx_rate_avg);
 	printf("\t  rx loss: %.1f%%\n", (double)_tstatus.rx_message_lost_rate);
+	_receiver.print_detailed_rx_stats();
 
 	if (_mavlink_ulog) {
 		printf("\tULog rate: %.1f%% of max %.1f%%\n", (double)_mavlink_ulog->current_data_rate() * 100.,
@@ -3084,8 +3097,7 @@ $ mavlink stream -u 14556 -s HIGHRES_IMU -r 50
 	PRINT_MODULE_USAGE_PARAM_FLAG('p', "Enable Broadcast", true);
 	PRINT_MODULE_USAGE_PARAM_INT('u', 14556, 0, 65536, "Select UDP Network Port (local)", true);
 	PRINT_MODULE_USAGE_PARAM_INT('o', 14550, 0, 65536, "Select UDP Network Port (remote)", true);
-	PRINT_MODULE_USAGE_PARAM_STRING('t', "127.0.0.1", nullptr,
-					"Partner IP (broadcasting can be enabled via MAV_{i}_BROADCAST param)", true);
+	PRINT_MODULE_USAGE_PARAM_STRING('t', "127.0.0.1", nullptr, "Partner IP (broadcasting can be enabled via -p flag)", true);
 #endif
 	PRINT_MODULE_USAGE_PARAM_STRING('m', "normal", "custom|camera|onboard|osd|magic|config|iridium|minimal|extvision|extvisionmin|gimbal",
 					"Mode: sets default streams and rates", true);
