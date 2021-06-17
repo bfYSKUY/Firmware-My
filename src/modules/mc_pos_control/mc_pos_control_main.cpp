@@ -336,7 +336,7 @@ MulticopterPositionControl::warn_rate_limited(const char *string)
 }
 
 int
-MulticopterPositionControl::parameters_update(bool force)
+MulticopterPositionControl::parameters_update(bool force)   //src\lib\parameters\parameters.cpp
 {
 	bool updated;
 	struct parameter_update_s param_upd;
@@ -523,7 +523,7 @@ MulticopterPositionControl::print_status()
 }
 
 void
-MulticopterPositionControl::run()
+MulticopterPositionControl::run()    //task_main();----
 {
 	hrt_abstime time_stamp_last_loop = hrt_absolute_time(); // time stamp of last loop iteration
 
@@ -539,7 +539,7 @@ MulticopterPositionControl::run()
 	orb_set_interval(_local_pos_sub, 20); // 50 Hz updates
 
 	// get initial values for all parameters and subscribtions
-	parameters_update(true);
+	parameters_update(true);     //src\lib\parameters\parameters.cpp
 	poll_subscriptions();
 
 	// setup file descriptor to poll the local position as loop wakeup source
@@ -1109,7 +1109,7 @@ void MulticopterPositionControl::send_vehicle_cmd_do(uint8_t nav_state)
 
 int MulticopterPositionControl::task_spawn(int argc, char *argv[])
 {
-	_task_id = px4_task_spawn_cmd("mc_pos_control",
+	_task_id = px4_task_spawn_cmd("mc_pos_control",    // 任务生成  platforms\nuttx\src\px4_layer\px4_nuttx_tasks.c 中定义
 					   SCHED_DEFAULT,
 					   SCHED_PRIORITY_POSITION_CONTROL,
 					   1900,
