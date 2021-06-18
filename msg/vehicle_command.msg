@@ -100,13 +100,13 @@ uint8 VEHICLE_ROI_ENUM_END = 5
 
 uint8 ORB_QUEUE_LENGTH = 3
 
-float32 param1			# Parameter 1, as defined by MAVLink uint16 VEHICLE_CMD enum.
-float32 param2			# Parameter 2, as defined by MAVLink uint16 VEHICLE_CMD enum.
-float32 param3			# Parameter 3, as defined by MAVLink uint16 VEHICLE_CMD enum.
-float32 param4			# Parameter 4, as defined by MAVLink uint16 VEHICLE_CMD enum.
-float64 param5			# Parameter 5, as defined by MAVLink uint16 VEHICLE_CMD enum.
-float64 param6			# Parameter 6, as defined by MAVLink uint16 VEHICLE_CMD enum.
-float32 param7			# Parameter 7, as defined by MAVLink uint16 VEHICLE_CMD enum.
+float32 param1			# Parameter 1, as defined by MAVLink uint16 VEHICLE_CMD enum.   //index of NAV_CMD_  ?  speed
+float32 param2			# Parameter 2, as defined by MAVLink uint16 VEHICLE_CMD enum.   //__FLT_EPSILON__
+float32 param3			# Parameter 3, as defined by MAVLink uint16 VEHICLE_CMD enum.	//FLT_EPSILON
+float32 param4			# Parameter 4, as defined by MAVLink uint16 VEHICLE_CMD enum.	//yaw
+float64 param5			# Parameter 5, as defined by MAVLink uint16 VEHICLE_CMD enum.   //lat
+float64 param6			# Parameter 6, as defined by MAVLink uint16 VEHICLE_CMD enum.	//lon
+float32 param7			# Parameter 7, as defined by MAVLink uint16 VEHICLE_CMD enum.	//alt
 uint16 command			# Command ID, as defined MAVLink by uint16 VEHICLE_CMD enum.
 uint8 target_system		# System which should execute the command
 uint8 target_component		# Component which should execute the command, 0 for all components

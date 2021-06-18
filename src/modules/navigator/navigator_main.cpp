@@ -332,8 +332,8 @@ Navigator::run()
 
 			} else if (cmd.command == vehicle_command_s::VEHICLE_CMD_DO_REPOSITION) {
 
-				position_setpoint_triplet_s *rep = get_reposition_triplet();
-				position_setpoint_triplet_s *curr = get_position_setpoint_triplet();
+				position_setpoint_triplet_s *rep = get_reposition_triplet();  //重新配置位置
+				position_setpoint_triplet_s *curr = get_position_setpoint_triplet();  // 设置位置
 
 				// store current position as previous position and goal as next
 				rep->previous.yaw = get_global_position()->yaw;
