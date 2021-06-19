@@ -66,6 +66,34 @@
 #include <uORB/topics/vehicle_status.h>
 #include <uORB/uORB.h>
 
+//自定义
+#include <lib/matrix/matrix/Vector3.hpp>
+matrix::Vector3f temp_point(1.0f,1.0f,1.0f);
+float valu_cos36 = cosf(math::radians(36));
+float valu_sin36 = sinf(math::radians(36));
+float valu_cos18 = cosf(math::radians(18));
+float valu_sin18 = sinf(math::radians(18));
+
+matrix::Vector3f temp_point1(-1 * valu_cos36, -1 * valu_sin36, 0);
+matrix::Vector3f temp_point2(valu_sin18, valu_cos18, 0);
+matrix::Vector3f temp_point3(valu_sin18, -1 * valu_cos18, 0);
+matrix::Vector3f temp_point4(-1 * valu_cos36, valu_sin36, 0);
+
+//自定义
+// position_setpoint_triplet_s My_temp;
+// position_setpoint_triplet_s My_1;
+
+// struct position_setpoint_s My_temp;
+// struct position_setpoint_s My_1;
+
+// struct position_setpoint_triplet_s My_temp;
+// struct position_setpoint_triplet_s My_1;
+
+// struct position_setpoint_triplet_s{
+// 	struct position_setpoint_s My_temp;
+// 	struct position_setpoint_s My_1;
+// }
+
 /**
  * navigator app start / stop handling function
  *
@@ -124,7 +152,7 @@ Navigator::Navigator() :
 	_home_pos_sub = orb_subscribe(ORB_ID(home_position));
 	_mission_sub = orb_subscribe(ORB_ID(mission));
 	_param_update_sub = orb_subscribe(ORB_ID(parameter_update));
-	_vehicle_command_sub = orb_subscribe(ORB_ID(vehicle_command));
+	_vehicle_command_sub = orb_subscribe(ORB_ID(vehicle_command));  //订阅数据
 	_traffic_sub = orb_subscribe(ORB_ID(transponder_report));
 
 	reset_triplets();
@@ -202,6 +230,92 @@ Navigator::params_update()
 	if (_handle_reverse_delay != PARAM_INVALID) {
 		param_get(_handle_reverse_delay, &_param_reverse_delay);
 	}
+}
+
+//绘图
+void Draw_Stars(uint16_t num)
+{
+	// draw_count = draw_count+1;
+	// orb_check(_vehicle_command_sub, &updated); //检查命令
+	// if (updated) {
+	// 	vehicle_command_s cmd;
+	// 	orb_copy(ORB_ID(vehicle_command), _vehicle_command_sub, &cmd);
+	// 	}
+	// _vroi_my = {};
+	// // cmd.command = vehicle_command_s::VEHICLE_CMD_DO_SET_ROI_WPNEXT_OFFSET;
+	// _vroi_my.mode = vehicle_command_s::VEHICLE_ROI_WPNEXT;   //下一个航点
+	// _vroi_my.pitch_offset = (float)cmd.param5 * M_DEG_TO_RAD_F;  //角度转弧度
+	// _vroi_my.roll_offset = (float)cmd.param6 * M_DEG_TO_RAD_F;
+	// _vroi_my.yaw_offset = (float)cmd.param7 * M_DEG_TO_RAD_F;
+	// _vroi_my.timestamp = hrt_absolute_time();
+	// orb_publish(ORB_ID(vehicle_roi), _vehicle_roi_pub, &_vroi_my);
+	vehicle_roi_s	_vroi{};
+
+	_vroi = {};
+	_vroi.mode = vehicle_command_s::VEHICLE_ROI_WPNEXT;   //下一个航点
+	My_temp = My_1;
+
+	switch (num)
+	{
+		case 0:
+			{	//第1个点
+				My_temp.lat = My_1.lat +  radius_cm_my;
+				_vroi.pitch_offset = (float)My_temp.lat * M_DEG_TO_RAD_F;  //角度转弧度
+				_vroi.roll_offset = (float)My_temp.lon  * M_DEG_TO_RAD_F;
+				_vroi.yaw_offset = (float)My_temp.alt  * M_DEG_TO_RAD_F;
+			}
+			break;
+		case 1:
+			{	//第2个点
+				temp_point = temp_point1 * radius_cm_my;
+				My_temp.lat = My_temp.lat + (double)temp_point(0);
+				My_temp.lon = My_temp.lon + (double)temp_point(1);
+
+				_vroi.pitch_offset = (float)My_temp.lat * M_DEG_TO_RAD_F;  //角度转弧度
+				_vroi.roll_offset = (float)My_temp.lon  * M_DEG_TO_RAD_F;
+				_vroi.yaw_offset = (float)My_temp.alt  * M_DEG_TO_RAD_F;
+			}
+			break;
+		case 2:
+			{	//第3个点
+				temp_point = temp_point2  * radius_cm_my;
+				My_temp.lat = My_temp.lat + (double)temp_point(0);
+				My_temp.lon = My_temp.lon + (double)temp_point(1);
+
+				_vroi.pitch_offset = (float)My_temp.lat * M_DEG_TO_RAD_F;  //角度转弧度
+				_vroi.roll_offset = (float)My_temp.lon  * M_DEG_TO_RAD_F;
+				_vroi.yaw_offset = (float)My_temp.alt  * M_DEG_TO_RAD_F;
+			}
+			break;
+		case 3:
+			{	//第4个点
+				temp_point = temp_point3  * radius_cm_my;
+				My_temp.lat = My_temp.lat + (double)temp_point(0);
+				My_temp.lon = My_temp.lon + (double)temp_point(1);
+
+				_vroi.pitch_offset = (float)My_temp.lat * M_DEG_TO_RAD_F;  //角度转弧度
+				_vroi.roll_offset = (float)My_temp.lon  * M_DEG_TO_RAD_F;
+				_vroi.yaw_offset = (float)My_temp.alt  * M_DEG_TO_RAD_F;
+			}
+			break;
+		case 4:
+			{	//第5个点
+				temp_point = temp_point4  * radius_cm_my;
+				My_temp.lat = My_temp.lat + (double)temp_point(0);
+				My_temp.lon = My_temp.lon + (double)temp_point(1);
+
+				_vroi.pitch_offset = (float)My_temp.lat * M_DEG_TO_RAD_F;  //角度转弧度
+				_vroi.roll_offset = (float)My_temp.lon  * M_DEG_TO_RAD_F;
+				_vroi.yaw_offset = (float)My_temp.alt  * M_DEG_TO_RAD_F;
+			}
+			break;
+
+		default:
+			break;
+	}
+
+
+
 }
 
 void
@@ -332,7 +446,7 @@ Navigator::run()
 
 			} else if (cmd.command == vehicle_command_s::VEHICLE_CMD_DO_REPOSITION) {
 
-				position_setpoint_triplet_s *rep = get_reposition_triplet();  //重新配置位置
+				position_setpoint_triplet_s *rep = get_reposition_triplet();  //需要重新配置位置的点
 				position_setpoint_triplet_s *curr = get_position_setpoint_triplet();  // 设置位置
 
 				// store current position as previous position and goal as next
@@ -507,10 +621,30 @@ Navigator::run()
 					break;
 
 				case vehicle_command_s::VEHICLE_CMD_DO_SET_ROI_WPNEXT_OFFSET:
-					_vroi.mode = vehicle_command_s::VEHICLE_ROI_WPNEXT;   //下一个航点
-					_vroi.pitch_offset = (float)cmd.param5 * M_DEG_TO_RAD_F;  //角度转弧度
-					_vroi.roll_offset = (float)cmd.param6 * M_DEG_TO_RAD_F;
-					_vroi.yaw_offset = (float)cmd.param7 * M_DEG_TO_RAD_F;
+					// _vroi.mode = vehicle_command_s::VEHICLE_ROI_WPNEXT;   //下一个航点
+					// _vroi.pitch_offset = (float)cmd.param5 * M_DEG_TO_RAD_F;  //角度转弧度
+					// _vroi.roll_offset = (float)cmd.param6 * M_DEG_TO_RAD_F;
+					// _vroi.yaw_offset = (float)cmd.param7 * M_DEG_TO_RAD_F;
+					//绘图
+					point_count_num = point_count_num + 1;  // 首先是起飞，再是更换位置----本命令
+					if(point_count_num > 5) {point_count_num = 1;}
+					if (point_count_num == 2) { // 起飞之后
+						// point_count_num = 0;
+						PX4_INFO("Output: nav_point 2");  //调试
+						_vroi_my.pitch_offset = (float)cmd.param5 * M_DEG_TO_RAD_F;  //保存该点
+						_vroi_my.roll_offset = (float)cmd.param6 * M_DEG_TO_RAD_F;
+						_vroi_my.yaw_offset = (float)cmd.param7 * M_DEG_TO_RAD_F;
+
+						//记录自定义点，在该点处绘图
+						position_setpoint_triplet_s *rep = get_position_setpoint_triplet();
+						rep->My_1.lat = get_global_position()->lat;
+						rep->My_1.lon = get_global_position()->lon;
+						rep->My_1.alt = get_global_position()->alt;
+
+					}
+					Draw_Stars(point_count_num - 1); //绘图---生成位置
+					PX4_INFO("Output: nav_point%d",point_count_num);  //调试
+
 					break;
 
 				case vehicle_command_s::VEHICLE_CMD_DO_SET_ROI_NONE:
