@@ -332,7 +332,7 @@ Mission::set_execution_mode(const uint8_t mode)
 					set_vtol_transition_item(&_mission_item, vtol_vehicle_status_s::VEHICLE_VTOL_STATE_FW);
 
 					position_setpoint_triplet_s *pos_sp_triplet = _navigator->get_position_setpoint_triplet();
-					pos_sp_triplet->previous = pos_sp_triplet->current;
+					pos_sp_triplet->previous = pos_sp_triplet->current;  //令两者相等
 					generate_waypoint_from_heading(&pos_sp_triplet->current, _mission_item.yaw);
 					_navigator->set_position_setpoint_triplet_updated();
 					issue_command(_mission_item);
@@ -631,7 +631,7 @@ Mission::set_mission_items()
 		mission_item_to_position_setpoint(_mission_item, &pos_sp_triplet->current);
 		pos_sp_triplet->next.valid = false;
 
-		/* reuse setpoint for LOITER only if it's not IDLE */
+		/* reuse setpoint for LOITER only if it's not IDLE */   //在该点悬停
 		_navigator->set_can_loiter_at_sp(pos_sp_triplet->current.type == position_setpoint_s::SETPOINT_TYPE_LOITER);
 
 		// set mission finished
@@ -792,7 +792,7 @@ Mission::set_mission_items()
 					mission_item_next_position = _mission_item;
 					has_next_position_item = true;
 
-					float altitude = _navigator->get_global_position()->alt;
+					float altitude = _navigator->get_global_position()->alt;  //获取当前高度
 
 					if (pos_sp_triplet->current.valid && pos_sp_triplet->current.type == position_setpoint_s::SETPOINT_TYPE_POSITION) {
 						altitude = pos_sp_triplet->current.alt;
@@ -837,7 +837,7 @@ Mission::set_mission_items()
 					 * XXX: We might want to change that at some point if it is clear to the user
 					 * what the altitude means on this waypoint type.
 					 */
-					float altitude = _navigator->get_global_position()->alt;
+					float altitude = _navigator->get_global_position()->alt;   //获取高度
 
 					if (pos_sp_triplet->current.valid
 					    && pos_sp_triplet->current.type == position_setpoint_s::SETPOINT_TYPE_POSITION) {
@@ -1000,7 +1000,7 @@ Mission::set_mission_items()
 
 	/*********************************** set setpoints and check next *********************************************/
 
-	position_setpoint_triplet_s *pos_sp_triplet = _navigator->get_position_setpoint_triplet();
+	position_setpoint_triplet_s *pos_sp_triplet = _navigator->get_position_setpoint_triplet(); //获取当前航点
 
 	/* set current position setpoint from mission item (is protected against non-position items) */
 	if (new_work_item_type != WORK_ITEM_TYPE_PRECISION_LAND) {
@@ -1039,7 +1039,7 @@ Mission::set_mission_items()
 		if (has_next_position_item) {
 			/* got next mission item, update setpoint triplet */
 			mission_apply_limitation(mission_item_next_position);
-			mission_item_to_position_setpoint(mission_item_next_position, &pos_sp_triplet->next);
+			mission_item_to_position_setpoint(mission_item_next_position, &pos_sp_triplet->next);  //下一个航点
 
 		} else {
 			/* next mission item is not available */
@@ -1054,7 +1054,7 @@ Mission::set_mission_items()
 	/* Save the distance between the current sp and the previous one */
 	if (pos_sp_triplet->current.valid && pos_sp_triplet->previous.valid) {
 
-		_distance_current_previous = get_distance_to_next_waypoint(
+		_distance_current_previous = get_distance_to_next_waypoint(     //下一个航点的距离
 						     pos_sp_triplet->current.lat, pos_sp_triplet->current.lon,
 						     pos_sp_triplet->previous.lat, pos_sp_triplet->previous.lon);
 	}
@@ -1178,10 +1178,9 @@ Mission::calculate_takeoff_altitude(struct mission_item_s *mission_item)
 }
 
 void
-Mission::heading_sp_update()
+Mission::heading_sp_update()   //更新位置
 {
-	struct position_setpoint_triplet_s *pos_sp_triplet =
-		_navigator->get_position_setpoint_triplet();
+	struct position_setpoint_triplet_s *pos_sp_triplet = _navigator->get_position_setpoint_triplet();
 
 	// Only update if current triplet is valid
 	if (pos_sp_triplet->current.valid) {
@@ -1205,7 +1204,7 @@ Mission::heading_sp_update()
 				break;
 			}
 
-		case vehicle_roi_s::ROI_WPNEXT: {
+		case vehicle_roi_s::ROI_WPNEXT: {  //移向下一个航点
 				// ROI is current waypoint. Vehcile needs to point towards current waypoint
 				point_to_latlon[0] = pos_sp_triplet->current.lat;
 				point_to_latlon[1] = pos_sp_triplet->current.lon;
@@ -1761,6 +1760,7 @@ Mission::index_closest_mission_item() const
 	return min_dist_index;
 }
 
+//设置两点相等
 bool Mission::position_setpoint_equal(const position_setpoint_s *p1, const position_setpoint_s *p2) const
 {
 	return ((p1->valid == p2->valid) &&
