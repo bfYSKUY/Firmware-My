@@ -124,7 +124,7 @@ float OutputBase::_calculate_pitch(double lon, double lat, float altitude,
 	return atan2f(z, target_distance);
 }
 
-void OutputBase::_set_angle_setpoints(const ControlData *control_data)
+void OutputBase::_set_angle_setpoints(const ControlData *control_data)  //设置位置
 {
 	_cur_control_data = control_data;
 
@@ -147,7 +147,7 @@ void OutputBase::_set_angle_setpoints(const ControlData *control_data)
 		break;
 
 	case ControlData::Type::LonLat:
-		_handle_position_update(true);
+		_handle_position_update(true);  //更新位置
 		break;
 
 	case ControlData::Type::Neutral:

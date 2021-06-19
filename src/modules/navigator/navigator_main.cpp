@@ -507,8 +507,8 @@ Navigator::run()
 					break;
 
 				case vehicle_command_s::VEHICLE_CMD_DO_SET_ROI_WPNEXT_OFFSET:
-					_vroi.mode = vehicle_command_s::VEHICLE_ROI_WPNEXT;
-					_vroi.pitch_offset = (float)cmd.param5 * M_DEG_TO_RAD_F;
+					_vroi.mode = vehicle_command_s::VEHICLE_ROI_WPNEXT;   //下一个航点
+					_vroi.pitch_offset = (float)cmd.param5 * M_DEG_TO_RAD_F;  //角度转弧度
 					_vroi.roll_offset = (float)cmd.param6 * M_DEG_TO_RAD_F;
 					_vroi.yaw_offset = (float)cmd.param7 * M_DEG_TO_RAD_F;
 					break;
@@ -525,7 +525,7 @@ Navigator::run()
 				_vroi.timestamp = hrt_absolute_time();
 
 				if (_vehicle_roi_pub != nullptr) {
-					orb_publish(ORB_ID(vehicle_roi), _vehicle_roi_pub, &_vroi);
+					orb_publish(ORB_ID(vehicle_roi), _vehicle_roi_pub, &_vroi);  // 发布，飞向下一个航点  src\modules\vmount\input_mavlink.cpp
 
 				} else {
 					_vehicle_roi_pub = orb_advertise(ORB_ID(vehicle_roi), &_vroi);

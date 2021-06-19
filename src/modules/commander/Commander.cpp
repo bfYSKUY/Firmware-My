@@ -1094,7 +1094,7 @@ Commander::handle_command(vehicle_status_s *status_local, const vehicle_command_
 
 	if (cmd_result != vehicle_command_s::VEHICLE_CMD_RESULT_UNSUPPORTED) {
 		/* already warned about unsupported commands in "default" case */
-		answer_command(cmd, cmd_result, *command_ack_pub);
+		answer_command(cmd, cmd_result, *command_ack_pub);   // 发布vehicle_command_ack
 	}
 
 	return true;
@@ -2097,7 +2097,7 @@ Commander::run()
 
 			/* evaluate the main state machine according to mode switches */     // 遥控器模式输入
 			bool first_rc_eval = (_last_sp_man.timestamp == 0) && (sp_man.timestamp > 0);
-			transition_result_t main_res = set_main_state(status, &status_changed);
+			transition_result_t main_res = set_main_state(status, &status_changed);  // 处理--状态切换
 
 			/* store last position lock state */
 			_last_condition_local_altitude_valid = status_flags.condition_local_altitude_valid;
@@ -2233,8 +2233,8 @@ Commander::run()
 			orb_copy(ORB_ID(vehicle_command), cmd_sub, &cmd);
 
 			/* handle it */
-			if (handle_command(&status, cmd, &armed, &command_ack_pub, &status_changed)) {  // 调用命令处理函数
-				status_changed = true;
+			if (handle_command(&status, cmd, &armed, &command_ack_pub, &status_changed)) {  // 调用命令处理函数    // 发布vehicle_command_ack
+				status_changed = true;  //data_link_check 来处理  set_main_state 来处理
 			}
 		}
 
