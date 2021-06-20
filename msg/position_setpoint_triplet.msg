@@ -7,4 +7,5 @@ px4/position_setpoint previous
 px4/position_setpoint current
 px4/position_setpoint next
 
-##添加航点？？？
+px4/position_setpoint my_temp  #自定义
+px4/position_setpoint my_1

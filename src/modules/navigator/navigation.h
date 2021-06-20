@@ -236,13 +236,6 @@ struct mission_save_point_s {
 #include <uORB/topics/mission.h>
 
 
-//绘图
-uint16_t point_count_num = 0;  //记录调用点的个数
-void Draw_Stars(uint16_t num);
-double radius_cm_my = 10;     //记录半径  初始化为10 倍数
-uint16_t draw_count = 0;
-// Vector3f path_point[10];  //保存航点
-
 
 /**
  * @}
