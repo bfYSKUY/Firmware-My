@@ -351,6 +351,7 @@ private:
 	position_setpoint_triplet_s			_reposition_triplet{};	/**< triplet for non-mission direct position command */
 	position_setpoint_triplet_s			_takeoff_triplet{};	/**< triplet for non-mission direct takeoff command */
 	vehicle_roi_s					_vroi{};		/**< vehicle ROI */
+	vehicle_roi_s					_vroi_my{};		/**< 自定义 */
 
 	perf_counter_t	_loop_perf;			/**< loop performance counter */
 

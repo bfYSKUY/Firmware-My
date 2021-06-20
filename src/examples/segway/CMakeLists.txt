@@ -33,8 +33,8 @@
 px4_add_module(
 	MODULE examples__segway
 	MAIN segway
-	STACK_MAIN 1400
-	STACK_MAX 1400
+	STACK_MAIN 1500
+	STACK_MAX 1500
 	SRCS
 		blocks.cpp
 		segway_main.cpp

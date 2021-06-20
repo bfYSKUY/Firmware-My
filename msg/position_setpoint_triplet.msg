@@ -6,3 +6,6 @@ uint64 timestamp		# time since system start (microseconds)
 px4/position_setpoint previous
 px4/position_setpoint current
 px4/position_setpoint next
+
+px4/position_setpoint my_temp  #自定义
+px4/position_setpoint my_1
