@@ -189,6 +189,7 @@ static bool send_vehicle_command(uint16_t cmd, float param1 = NAN, float param2 
 #endif
 
 extern "C" __EXPORT int commander_main(int argc, char *argv[])
+// int commander_main(int argc, char *argv[])   //转发mavlink 命令
 {
 	if (argc < 2) {
 		Commander::print_usage("missing command");
@@ -518,7 +519,7 @@ Commander::Commander() :
 
 bool
 Commander::handle_command(vehicle_status_s *status_local, const vehicle_command_s &cmd, actuator_armed_s *armed_local,
-			  uORB::PublicationQueued<vehicle_command_ack_s> &command_ack_pub)
+			  uORB::PublicationQueued<vehicle_command_ack_s> &command_ack_pub)  //处理命令
 {
 	/* only handle commands that are meant to be handled by this system and component */
 	if (cmd.target_system != status_local->system_id || ((cmd.target_component != status_local->component_id)
@@ -879,7 +880,7 @@ Commander::handle_command(vehicle_status_s *status_local, const vehicle_command_
 		}
 		break;
 
-	case vehicle_command_s::VEHICLE_CMD_NAV_GUIDED_ENABLE: {
+	case vehicle_command_s::VEHICLE_CMD_NAV_GUIDED_ENABLE: {   // offboard模式的进入
 			transition_result_t res = TRANSITION_DENIED;
 
 			if (_internal_state.main_state != commander_state_s::MAIN_STATE_OFFBOARD) {
@@ -1113,7 +1114,7 @@ Commander::handle_command(vehicle_status_s *status_local, const vehicle_command_
 
 	if (cmd_result != vehicle_command_s::VEHICLE_CMD_RESULT_UNSUPPORTED) {
 		/* already warned about unsupported commands in "default" case */
-		answer_command(cmd, cmd_result, command_ack_pub);
+		answer_command(cmd, cmd_result, command_ack_pub);   // 发布vehicle_command_ack
 	}
 
 	return true;
@@ -1323,6 +1324,27 @@ Commander::run()
 	int32_t rc_map_arm_switch = 0;
 
 	/* initialize low priority thread */
+
+	// /////////888888///////
+	// /* RC override auto modes */
+	// int32_t rc_override = 0;
+
+	// int32_t takeoff_complete_act = 0;
+
+	// /* Thresholds for engine failure detection */
+	// float ef_throttle_thres = 1.0f;
+	// float ef_current2throttle_thres = 0.0f;
+	// float ef_time_thres = 1000.0f;
+	// uint64_t timestamp_engine_healthy = 0; /**< absolute time when engine was healty */
+
+	// /* check which state machines for changes, clear "changed" flag */
+	// bool failsafe_old = false;
+
+	// bool have_taken_off_since_arming = false;
+
+	// /////////888888///////
+
+	/* initialize low priority thread */  //创建低优先级线程
 	pthread_attr_t commander_low_prio_attr;
 	pthread_attr_init(&commander_low_prio_attr);
 	pthread_attr_setstacksize(&commander_low_prio_attr, PX4_STACK_ADJUSTED(3000));
@@ -1770,7 +1792,7 @@ Commander::run()
 			}
 		}
 
-		/* start geofence result check */
+		/* start geofence result check */   //电子围栏
 		_geofence_result_sub.update(&_geofence_result);
 
 		const bool in_low_battery_failsafe = _battery_warning > battery_status_s::BATTERY_WARNING_LOW;
@@ -2063,9 +2085,9 @@ Commander::run()
 				tune_negative(true);
 			}
 
-			/* evaluate the main state machine according to mode switches */
+			/* evaluate the main state machine according to mode switches */   // 遥控器模式输入
 			bool first_rc_eval = (_last_manual_control_setpoint.timestamp == 0) && (_manual_control_setpoint.timestamp > 0);
-			transition_result_t main_res = set_main_state(status, &_status_changed);
+			transition_result_t main_res = set_main_state(status, &_status_changed);  // 处理--状态切换
 
 			/* store last position lock state */
 			_last_condition_local_altitude_valid = status_flags.condition_local_altitude_valid;
@@ -2210,8 +2232,8 @@ Commander::run()
 					PX4_ERR("vehicle_command lost, generation %d -> %d", last_generation, _cmd_sub.get_last_generation());
 				}
 
-				if (handle_command(&status, cmd, &armed, _command_ack_pub)) {
-					_status_changed = true;
+				if (handle_command(&status, cmd, &armed, _command_ack_pub)) {   // 调用命令处理函数    // 发布vehicle_command_ack
+					_status_changed = true;  //data_link_check 来处理  set_main_state 来处理
 				}
 			}
 		}
@@ -2383,6 +2405,8 @@ Commander::run()
 
 			status.timestamp = hrt_absolute_time();
 			_status_pub.publish(status);
+			// status.timestamp = now;
+			// orb_publish(ORB_ID(vehicle_status), _status_pub, &status);    // // 包含了vtol判 断、rc、DLink、arm状态、及飞行模式，
 
 			switch ((PrearmedMode)_param_com_prearm_mode.get()) {
 			case PrearmedMode::DISABLED:
@@ -2417,6 +2441,7 @@ Commander::run()
 
 			armed.timestamp = hrt_absolute_time();
 			_armed_pub.publish(armed);
+			// orb_publish(ORB_ID(actuator_armed), armed_pub, &armed);   // // 发布飞机 fmu 、及io的 加锁解锁状态
 
 			/* publish internal state for logging purposes */
 			_internal_state.timestamp = hrt_absolute_time();
@@ -3280,6 +3305,10 @@ Commander::update_control_mode()
 	case vehicle_status_s::NAVIGATION_STATE_OFFBOARD: {
 
 			const offboard_control_mode_s &offboard_control_mode = _offboard_control_mode_sub.get();
+	// case vehicle_status_s::NAVIGATION_STATE_OFFBOARD:    //offboard 模式控制
+	// 	control_mode.flag_control_manual_enabled = false;
+	// 	control_mode.flag_control_auto_enabled = false;
+	// 	control_mode.flag_control_offboard_enabled = true;
 
 			control_mode.flag_control_offboard_enabled = true;
 

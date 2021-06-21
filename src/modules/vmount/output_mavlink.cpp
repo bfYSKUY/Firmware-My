@@ -63,7 +63,7 @@ int OutputMavlink::update(const ControlData *control_data)
 
 	if (control_data) {
 		//got new command
-		_set_angle_setpoints(control_data);
+		_set_angle_setpoints(control_data);   //设置位置/更新位置
 
 		vehicle_command.command = vehicle_command_s::VEHICLE_CMD_DO_MOUNT_CONFIGURE;
 		vehicle_command.timestamp = hrt_absolute_time();
@@ -76,8 +76,7 @@ int OutputMavlink::update(const ControlData *control_data)
 			vehicle_command.param7 = 0.0f;
 
 		} else {
-			vehicle_command.param1 = vehicle_command_s::VEHICLE_MOUNT_MODE_MAVLINK_TARGETING;
-
+			vehicle_command.param1 = vehicle_command_s::VEHICLE_MOUNT_MODE_MAVLINK_TARGETING;  //更新命令，更换位置
 			vehicle_command.param5 = static_cast<double>(control_data->type_data.angle.frames[0]);
 			vehicle_command.param6 = static_cast<double>(control_data->type_data.angle.frames[1]);
 			vehicle_command.param7 = static_cast<float>(control_data->type_data.angle.frames[2]);
@@ -90,10 +89,10 @@ int OutputMavlink::update(const ControlData *control_data)
 		_vehicle_command_pub.publish(vehicle_command);
 	}
 
-	_handle_position_update();
+	_handle_position_update();  //更新位置
 
 	hrt_abstime t = hrt_absolute_time();
-	_calculate_output_angles(t);
+	_calculate_output_angles(t);  //计算控制量
 
 	vehicle_command.timestamp = t;
 	vehicle_command.command = vehicle_command_s::VEHICLE_CMD_DO_MOUNT_CONTROL;

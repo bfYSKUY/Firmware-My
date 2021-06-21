@@ -179,7 +179,7 @@ extern output_limit_t pwm_limit;
 # define ADC_VSERVO			4
 # define ADC_RSSI			5
 
-#define BUTTON_SAFETY		px4_arch_gpioread(GPIO_BTN_SAFETY)
+#define BUTTON_SAFETY		px4_arch_gpioread(GPIO_BTN_SAFETY)  //boards\px4\fmu-v5\src\board_config.h   //读取该引脚
 
 #define CONTROL_PAGE_INDEX(_group, _channel) (_group * PX4IO_CONTROL_CHANNELS + _channel)
 

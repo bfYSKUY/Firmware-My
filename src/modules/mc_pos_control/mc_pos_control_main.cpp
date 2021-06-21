@@ -319,7 +319,7 @@ MulticopterPositionControl::init()
 }
 
 int
-MulticopterPositionControl::parameters_update(bool force)
+MulticopterPositionControl::parameters_update(bool force)   //src\lib\parameters\parameters.cpp
 {
 	// check for parameter updates
 	if (_parameter_update_sub.updated() || force) {
@@ -521,6 +521,27 @@ MulticopterPositionControl::Run()
 	perf_begin(_cycle_perf);
 
 	if (_local_pos_sub.update(&_local_pos)) {
+	// _local_pos_sub = orb_subscribe(ORB_ID(vehicle_local_position));
+	// orb_set_interval(_local_pos_sub, 20); // 50 Hz updates
+
+	// // get initial values for all parameters and subscribtions
+	// parameters_update(true);     //src\lib\parameters\parameters.cpp
+	// poll_subscriptions();
+
+	// // setup file descriptor to poll the local position as loop wakeup source
+	// px4_pollfd_struct_t poll_fd = {};
+	// poll_fd.fd = _local_pos_sub;
+	// poll_fd.events = POLLIN;
+
+	// while (!should_exit()) {
+	// 	// poll for new data on the local position state topic (wait for up to 20ms)
+	// 	const int poll_return = px4_poll(&poll_fd, 1, 20);
+	// 	// poll_return == 0: go through the loop anyway to copy manual input at 50 Hz
+	// 	// this is undesirable but not much we can do
+	// 	if (poll_return < 0) {
+	// 		PX4_ERR("poll error %d %d", poll_return, errno);
+	// 		continue;
+	// 	}
 
 		poll_subscriptions();
 		parameters_update(false);
@@ -1044,6 +1065,16 @@ int MulticopterPositionControl::task_spawn(int argc, char *argv[])
 		if (strcmp(argv[1], "vtol") == 0) {
 			vtol = true;
 		}
+	// _task_id = px4_task_spawn_cmd("mc_pos_control",    // 任务生成  platforms\nuttx\src\px4_layer\px4_nuttx_tasks.c 中定义
+	// 				   SCHED_DEFAULT,
+	// 				   SCHED_PRIORITY_POSITION_CONTROL,
+	// 				   1900,
+	// 				   (px4_main_t)&run_trampoline,
+	// 				   (char *const *)argv);
+
+	// if (_task_id < 0) {
+	// 	_task_id = -1;
+	// 	return -errno;
 	}
 
 	MulticopterPositionControl *instance = new MulticopterPositionControl(vtol);

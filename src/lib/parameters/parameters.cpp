@@ -356,10 +356,11 @@ param_find_internal(const char *name, bool notification)
 	return PARAM_INVALID;
 }
 
+//它的作用是在系统中查找这个参数是否存在，如果存在则返回系统参数并在系统中标记为 “used”，查找不到就返回 invalid
 param_t
 param_find(const char *name)
 {
-	return param_find_internal(name, true);
+	return param_find_internal(name, true);  //表面意思就是内部参数查找
 }
 
 param_t

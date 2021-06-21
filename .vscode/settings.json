@@ -63,7 +63,7 @@
         "C_Cpp.default.macFrameworkPath": null,
         "C_Cpp.formatting": "Disabled",
         "C_Cpp.intelliSenseEngine": "Default",
-        "C_Cpp.intelliSenseEngineFallback": "Enabled",
+        "C_Cpp.intelliSenseEngineFallback": "Disabled",
         "C_Cpp.vcpkg.enabled": false,
         "C_Cpp.workspaceParsingPriority": "low",
         "cortex-debug.enableTelemetry": false,

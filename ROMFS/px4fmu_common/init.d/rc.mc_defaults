@@ -20,6 +20,8 @@ then
 	param set PWM_RATE 400
 
 	param set GPS_UBX_DYNMODEL 6
+	# no safety switch    #取消安全开关
+	param set CBRK_IO_SAFETY    22027
 fi
 
 #

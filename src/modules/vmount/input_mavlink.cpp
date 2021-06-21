@@ -107,7 +107,7 @@ int InputMavlinkROI::update_impl(unsigned int timeout_ms, ControlData **control_
 	} else {
 		if (polls[0].revents & POLLIN) {
 			vehicle_roi_s vehicle_roi;
-			orb_copy(ORB_ID(vehicle_roi), _vehicle_roi_sub, &vehicle_roi);
+			orb_copy(ORB_ID(vehicle_roi), _vehicle_roi_sub, &vehicle_roi);   // 得到航点数据
 
 			_control_data.gimbal_shutter_retract = false;
 
