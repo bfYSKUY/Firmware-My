@@ -18,6 +18,9 @@ then
 	param set PWM_MAX 1950
 	param set PWM_MIN 1075
 	param set PWM_RATE 400
+
+	# no safety switch    #取消安全开关
+	param set CBRK_IO_SAFETY    22027
 fi
 
 #

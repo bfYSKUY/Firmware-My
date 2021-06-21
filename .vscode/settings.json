@@ -62,18 +62,6 @@
         "C_Cpp.formatting": "Disabled",
         "C_Cpp.intelliSenseEngine": "Default",
         "C_Cpp.intelliSenseEngineFallback": "Disabled",
-        "debug.toolBarLocation": "docked",
-        "editor.insertSpaces": false,
-        "editor.minimap.maxColumn": 120,
-        "editor.minimap.renderCharacters": false,
-        "editor.minimap.showSlider": "always",
-        "editor.smoothScrolling": true,
-        "editor.suggest.localityBonus": true,
-        "editor.tabSize": 8,
-        "editor.wordWrapColumn": 120,
-        "explorer.openEditors.visible": 0,
-        "files.insertFinalNewline": true,
-        "files.trimTrailingWhitespace": true,
         "git.detectSubmodulesLimit": 20,
         "files.associations": {
                 "*.jinja": "jinja"
@@ -83,9 +71,5 @@
         },
         "search.showLineNumbers": true,
         "window.title": "${dirty} ${activeEditorMedium}${separator}${rootName}",
-        "workbench.editor.enablePreview": false,
-        "workbench.editor.enablePreviewFromQuickOpen": false,
-        "workbench.editor.highlightModifiedTabs": true,
-        "workbench.settings.enableNaturalLanguageSearch": false,
-        "workbench.statusBar.feedback.visible": false
+
 }

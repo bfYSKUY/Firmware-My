@@ -275,7 +275,7 @@ static bool send_vehicle_command(uint16_t cmd, float param1 = NAN, float param2 
 	return (h != nullptr);
 }
 
-int commander_main(int argc, char *argv[])
+int commander_main(int argc, char *argv[])   //转发mavlink 命令
 {
 	if (argc < 2) {
 		usage("missing command");
@@ -602,7 +602,7 @@ Commander::~Commander()
 
 bool
 Commander::handle_command(vehicle_status_s *status_local, const vehicle_command_s &cmd, actuator_armed_s *armed_local,
-			  orb_advert_t *command_ack_pub, bool *changed)
+			  orb_advert_t *command_ack_pub, bool *changed)  //处理命令
 {
 	/* only handle commands that are meant to be handled by this system and component */
 	if (cmd.target_system != status_local->system_id || ((cmd.target_component != status_local->component_id)
@@ -916,7 +916,7 @@ Commander::handle_command(vehicle_status_s *status_local, const vehicle_command_
 		}
 		break;
 
-	case vehicle_command_s::VEHICLE_CMD_NAV_GUIDED_ENABLE: {
+	case vehicle_command_s::VEHICLE_CMD_NAV_GUIDED_ENABLE: {   // offboard模式的进入
 			transition_result_t res = TRANSITION_DENIED;
 			static main_state_t main_state_pre_offboard = commander_state_s::MAIN_STATE_MANUAL;
 
@@ -1094,7 +1094,7 @@ Commander::handle_command(vehicle_status_s *status_local, const vehicle_command_
 
 	if (cmd_result != vehicle_command_s::VEHICLE_CMD_RESULT_UNSUPPORTED) {
 		/* already warned about unsupported commands in "default" case */
-		answer_command(cmd, cmd_result, *command_ack_pub);
+		answer_command(cmd, cmd_result, *command_ack_pub);   // 发布vehicle_command_ack
 	}
 
 	return true;
@@ -1361,7 +1361,7 @@ Commander::run()
 
 	bool have_taken_off_since_arming = false;
 
-	/* initialize low priority thread */
+	/* initialize low priority thread */  //创建低优先级线程
 	pthread_attr_t commander_low_prio_attr;
 	pthread_attr_init(&commander_low_prio_attr);
 	pthread_attr_setstacksize(&commander_low_prio_attr, PX4_STACK_ADJUSTED(3000));
@@ -1824,7 +1824,7 @@ Commander::run()
 			}
 		}
 
-		/* start geofence result check */
+		/* start geofence result check */   //电子围栏
 		orb_check(geofence_result_sub, &updated);
 
 		if (updated) {
@@ -2095,9 +2095,9 @@ Commander::run()
 				tune_negative(true);
 			}
 
-			/* evaluate the main state machine according to mode switches */
+			/* evaluate the main state machine according to mode switches */     // 遥控器模式输入
 			bool first_rc_eval = (_last_sp_man.timestamp == 0) && (sp_man.timestamp > 0);
-			transition_result_t main_res = set_main_state(status, &status_changed);
+			transition_result_t main_res = set_main_state(status, &status_changed);  // 处理--状态切换
 
 			/* store last position lock state */
 			_last_condition_local_altitude_valid = status_flags.condition_local_altitude_valid;
@@ -2233,8 +2233,8 @@ Commander::run()
 			orb_copy(ORB_ID(vehicle_command), cmd_sub, &cmd);
 
 			/* handle it */
-			if (handle_command(&status, cmd, &armed, &command_ack_pub, &status_changed)) {
-				status_changed = true;
+			if (handle_command(&status, cmd, &armed, &command_ack_pub, &status_changed)) {  // 调用命令处理函数    // 发布vehicle_command_ack
+				status_changed = true;  //data_link_check 来处理  set_main_state 来处理
 			}
 		}
 
@@ -2359,7 +2359,7 @@ Commander::run()
 			orb_publish(ORB_ID(vehicle_control_mode), control_mode_pub, &control_mode);
 
 			status.timestamp = now;
-			orb_publish(ORB_ID(vehicle_status), _status_pub, &status);
+			orb_publish(ORB_ID(vehicle_status), _status_pub, &status);    // // 包含了vtol判 断、rc、DLink、arm状态、及飞行模式，
 
 			armed.timestamp = now;
 
@@ -2377,7 +2377,7 @@ Commander::run()
 				armed.prearmed = (hrt_elapsed_time(&commander_boot_timestamp) > 5_s);
 			}
 
-			orb_publish(ORB_ID(actuator_armed), armed_pub, &armed);
+			orb_publish(ORB_ID(actuator_armed), armed_pub, &armed);   // // 发布飞机 fmu 、及io的 加锁解锁状态
 
 			/* publish internal state for logging purposes */
 			if (commander_state_pub != nullptr) {
@@ -3313,7 +3313,7 @@ set_control_mode()
 		control_mode.flag_control_termination_enabled = true;
 		break;
 
-	case vehicle_status_s::NAVIGATION_STATE_OFFBOARD:
+	case vehicle_status_s::NAVIGATION_STATE_OFFBOARD:    //offboard 模式控制
 		control_mode.flag_control_manual_enabled = false;
 		control_mode.flag_control_auto_enabled = false;
 		control_mode.flag_control_offboard_enabled = true;

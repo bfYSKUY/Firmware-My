@@ -531,7 +531,7 @@ TFMINI::collect()
 		return -EAGAIN;
 	}
 
-	/* publish most recent valid measurement from buffer */
+	/* publish most recent valid measurement from buffer */   //发布消息
 	distance_sensor_s report{};
 
 	report.timestamp = hrt_absolute_time();
@@ -601,11 +601,7 @@ TFMINI::cycle()
 
 		if (collect_ret == -EAGAIN) {
 			/* reschedule to grab the missing bits, time to transmit 9 bytes @ 115200 bps */
-			work_queue(HPWORK,
-				   &_work,
-				   (worker_t)&TFMINI::cycle_trampoline,
-				   this,
-				   USEC2TICK(87 * 9));
+			work_queue(HPWORK,&_work,(worker_t)&TFMINI::cycle_trampoline,this,USEC2TICK(87 * 9));
 			return;
 		}
 
@@ -618,12 +614,7 @@ TFMINI::cycle()
 		if (_measure_ticks > USEC2TICK(_conversion_interval)) {
 
 			/* schedule a fresh cycle call when we are ready to measure again */
-			work_queue(HPWORK,
-				   &_work,
-				   (worker_t)&TFMINI::cycle_trampoline,
-				   this,
-				   _measure_ticks - USEC2TICK(_conversion_interval));
-
+			work_queue(HPWORK,&_work,(worker_t)&TFMINI::cycle_trampoline,this,_measure_ticks - USEC2TICK(_conversion_interval));
 			return;
 		}
 	}
@@ -632,11 +623,7 @@ TFMINI::cycle()
 	_collect_phase = true;
 
 	/* schedule a fresh cycle call when the measurement is done */
-	work_queue(HPWORK,
-		   &_work,
-		   (worker_t)&TFMINI::cycle_trampoline,
-		   this,
-		   USEC2TICK(_conversion_interval));
+	work_queue(HPWORK,&_work,(worker_t)&TFMINI::cycle_trampoline,this,USEC2TICK(_conversion_interval));
 }
 
 void

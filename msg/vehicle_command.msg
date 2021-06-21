@@ -92,7 +92,7 @@ uint8 VEHICLE_MOUNT_MODE_GPS_POINT = 4				# Load neutral position and start to p
 uint8 VEHICLE_MOUNT_MODE_ENUM_END = 5				#
 
 uint8 VEHICLE_ROI_NONE = 0                         # No region of interest |
-uint8 VEHICLE_ROI_WPNEXT = 1                       # Point toward next MISSION |
+uint8 VEHICLE_ROI_WPNEXT = 1                       # Point toward next MISSION |  // 下一个航点
 uint8 VEHICLE_ROI_WPINDEX = 2                      # Point toward given MISSION |
 uint8 VEHICLE_ROI_LOCATION = 3                     # Point toward fixed location |
 uint8 VEHICLE_ROI_TARGET = 4                       # Point toward target
@@ -100,13 +100,13 @@ uint8 VEHICLE_ROI_ENUM_END = 5
 
 uint8 ORB_QUEUE_LENGTH = 3
 
-float32 param1			# Parameter 1, as defined by MAVLink uint16 VEHICLE_CMD enum.
-float32 param2			# Parameter 2, as defined by MAVLink uint16 VEHICLE_CMD enum.
-float32 param3			# Parameter 3, as defined by MAVLink uint16 VEHICLE_CMD enum.
-float32 param4			# Parameter 4, as defined by MAVLink uint16 VEHICLE_CMD enum.
-float64 param5			# Parameter 5, as defined by MAVLink uint16 VEHICLE_CMD enum.
-float64 param6			# Parameter 6, as defined by MAVLink uint16 VEHICLE_CMD enum.
-float32 param7			# Parameter 7, as defined by MAVLink uint16 VEHICLE_CMD enum.
+float32 param1			# Parameter 1, as defined by MAVLink uint16 VEHICLE_CMD enum.   //index of NAV_CMD_  ?  speed   ? base_mode
+float32 param2			# Parameter 2, as defined by MAVLink uint16 VEHICLE_CMD enum.   //__FLT_EPSILON__    ?   custom_main_mode
+float32 param3			# Parameter 3, as defined by MAVLink uint16 VEHICLE_CMD enum.	//FLT_EPSILON        ?   custom_sub_mode
+float32 param4			# Parameter 4, as defined by MAVLink uint16 VEHICLE_CMD enum.	//yaw
+float64 param5			# Parameter 5, as defined by MAVLink uint16 VEHICLE_CMD enum.   //lat
+float64 param6			# Parameter 6, as defined by MAVLink uint16 VEHICLE_CMD enum.	//lon
+float32 param7			# Parameter 7, as defined by MAVLink uint16 VEHICLE_CMD enum.	//alt
 uint16 command			# Command ID, as defined MAVLink by uint16 VEHICLE_CMD enum.
 uint8 target_system		# System which should execute the command
 uint8 target_component		# Component which should execute the command, 0 for all components

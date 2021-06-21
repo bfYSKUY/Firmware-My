@@ -80,7 +80,7 @@ int px4_task_spawn_cmd(const char *name, int scheduler, int priority, int stack_
 	clearenv();
 #endif
 	/* create the task */
-	pid = task_create(name, priority, stack_size, entry, argv);
+	pid = task_create(name, priority, stack_size, entry, argv);  //platforms\nuttx\NuttX\nuttx\sched\task\task_create.c 调用  //platforms\nuttx\NuttX\nuttx\sched\task\task_create.c thread_create(**)
 
 	if (pid > 0) {
 
