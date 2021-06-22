@@ -1,4 +1,6 @@
 
+add_compile_options(-Wno-unused-but-set-parameter)
+
 px4_add_board(
 	PLATFORM nuttx
 	VENDOR px4
