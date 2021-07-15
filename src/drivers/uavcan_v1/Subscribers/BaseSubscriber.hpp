@@ -46,21 +46,20 @@
 #include <lib/parameters/param.h>
 
 #include "../CanardInterface.hpp"
+#include "../ParamManager.hpp"
 
 class UavcanBaseSubscriber
 {
 public:
-	static constexpr uint16_t CANARD_PORT_ID_UNSET = 65535U;
-	static constexpr uint16_t CANARD_PORT_ID_MAX   = 32767U;
-
 	UavcanBaseSubscriber(CanardInstance &ins, const char *subject_name, uint8_t instance = 0) :
 		_canard_instance(ins), _instance(instance)
 	{
 		_subj_sub._subject_name = subject_name;
 		_subj_sub._canard_sub.user_reference = this;
+		_subj_sub._canard_sub.port_id = CANARD_PORT_ID_UNSET;
 	}
 
-	~UavcanBaseSubscriber()
+	virtual ~UavcanBaseSubscriber()
 	{
 		unsubscribe();
 	}
@@ -114,6 +113,16 @@ public:
 		}
 
 		return false;
+	}
+
+	const char *getSubjectName()
+	{
+		return _subj_sub._subject_name;
+	}
+
+	uint8_t getInstance()
+	{
+		return _instance;
 	}
 
 	void printInfo()

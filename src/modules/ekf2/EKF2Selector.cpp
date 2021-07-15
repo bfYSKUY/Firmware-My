@@ -102,7 +102,7 @@ void EKF2Selector::PrintInstanceChange(const uint8_t old_instance, uint8_t new_i
 			new_reason = "";
 		}
 
-		PX4_WARN("primary EKF changed %d%s -> %d%s", old_instance, old_reason, new_instance, new_reason);
+		PX4_WARN("primary EKF changed %" PRIu8 "%s -> %" PRIu8 "%s", old_instance, old_reason, new_instance, new_reason);
 	}
 }
 
@@ -283,15 +283,15 @@ bool EKF2Selector::UpdateErrorScores()
 			}
 
 			// test ratios are invalid when 0, >= 1 is a failure
-			if (status.vel_test_ratio <= 0.f) {
+			if (!PX4_ISFINITE(status.vel_test_ratio) || (status.vel_test_ratio <= 0.f)) {
 				status.vel_test_ratio = 1.f;
 			}
 
-			if (status.pos_test_ratio <= 0.f) {
+			if (!PX4_ISFINITE(status.pos_test_ratio) || (status.pos_test_ratio <= 0.f)) {
 				status.pos_test_ratio = 1.f;
 			}
 
-			if (status.hgt_test_ratio <= 0.f) {
+			if (!PX4_ISFINITE(status.hgt_test_ratio) || (status.hgt_test_ratio <= 0.f)) {
 				status.hgt_test_ratio = 1.f;
 			}
 
@@ -306,7 +306,7 @@ bool EKF2Selector::UpdateErrorScores()
 				_instance[i].relative_test_ratio = 0;
 			}
 
-		} else if (hrt_elapsed_time(&_instance[i].timestamp_sample_last) > status_timeout) {
+		} else if (!_instance[i].timeout && (hrt_elapsed_time(&_instance[i].timestamp_sample_last) > status_timeout)) {
 			_instance[i].healthy = false;
 			_instance[i].timeout = true;
 		}
@@ -809,7 +809,7 @@ void EKF2Selector::PublishEstimatorSelectorStatus()
 
 void EKF2Selector::PrintStatus()
 {
-	PX4_INFO("available instances: %d", _available_instances);
+	PX4_INFO("available instances: %" PRIu8, _available_instances);
 
 	if (_selected_instance == INVALID_INSTANCE) {
 		PX4_WARN("selected instance: None");
@@ -818,7 +818,7 @@ void EKF2Selector::PrintStatus()
 	for (int i = 0; i < _available_instances; i++) {
 		const EstimatorInstance &inst = _instance[i];
 
-		PX4_INFO("%d: ACC: %d, GYRO: %d, MAG: %d, %s, test ratio: %.7f (%.5f) %s",
+		PX4_INFO("%" PRIu8 ": ACC: %" PRIu32 ", GYRO: %" PRIu32 ", MAG: %" PRIu32 ", %s, test ratio: %.7f (%.5f) %s",
 			 inst.instance, inst.accel_device_id, inst.gyro_device_id, inst.mag_device_id,
 			 inst.healthy ? "healthy" : "unhealthy",
 			 (double)inst.combined_test_ratio, (double)inst.relative_test_ratio,

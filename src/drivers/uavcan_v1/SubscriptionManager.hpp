@@ -58,25 +58,30 @@
 #include "Subscribers/uORB/sensor_gps.hpp"
 
 typedef struct {
-	const char *px4_name;
 	UavcanDynamicPortSubscriber *(*create_sub)(CanardInstance &ins, UavcanParamManager &pmgr) {};
+	const char *subject_name;
+	const uint8_t instance;
 } UavcanDynSubBinder;
 
 class SubscriptionManager
 {
 public:
 	SubscriptionManager(CanardInstance &ins, UavcanParamManager &pmgr) : _canard_instance(ins), _param_manager(pmgr) {}
+	~SubscriptionManager();
 
 	void subscribe();
 	void printInfo();
 	void updateParams();
 
 private:
+	void updateDynamicSubscriptions();
+
 	CanardInstance &_canard_instance;
 	UavcanParamManager &_param_manager;
 	UavcanDynamicPortSubscriber *_dynsubscribers {NULL};
 
 	UavcanHeartbeatSubscriber _heartbeat_sub {_canard_instance};
+
 	// GetInfo response
 	UavcanGetInfoResponse _getinfo_rsp {_canard_instance};
 
@@ -85,46 +90,52 @@ private:
 
 	const UavcanDynSubBinder _uavcan_subs[6] {
 		{
-			"UCAN1_ESC0_PID",
 			[](CanardInstance & ins, UavcanParamManager & pmgr) -> UavcanDynamicPortSubscriber *
 			{
 				return new UavcanEscSubscriber(ins, pmgr, 0);
-			}
+			},
+			"esc",
+			0
 		},
 		{
-			"UCAN1_GPS0_PID",
-			[](CanardInstance & ins, UavcanParamManager & pmgr) -> UavcanDynamicPortSubscriber *
-			{
-				return new UavcanGnssSubscriber(ins, pmgr, 1);
-			}
-		},
-		{
-			"UCAN1_GPS1_PID",
 			[](CanardInstance & ins, UavcanParamManager & pmgr) -> UavcanDynamicPortSubscriber *
 			{
 				return new UavcanGnssSubscriber(ins, pmgr, 0);
-			}
+			},
+			"gps",
+			0
 		},
 		{
-			"UCAN1_BMS_ES_PID",
+			[](CanardInstance & ins, UavcanParamManager & pmgr) -> UavcanDynamicPortSubscriber *
+			{
+				return new UavcanGnssSubscriber(ins, pmgr, 1);
+			},
+			"gps",
+			1
+		},
+		{
 			[](CanardInstance & ins, UavcanParamManager & pmgr) -> UavcanDynamicPortSubscriber *
 			{
 				return new UavcanBmsSubscriber(ins, pmgr, 0);
-			}
+			},
+			"energy_source",
+			0
 		},
 		{
-			"UCAN1_LG_BMS_PID",
 			[](CanardInstance & ins, UavcanParamManager & pmgr) -> UavcanDynamicPortSubscriber *
 			{
 				return new UavcanLegacyBatteryInfoSubscriber(ins, pmgr, 0);
-			}
+			},
+			"legacy_bms",
+			0
 		},
 		{
-			"UCAN1_UORB_GPS",
 			[](CanardInstance & ins, UavcanParamManager & pmgr) -> UavcanDynamicPortSubscriber *
 			{
 				return new UORB_over_UAVCAN_sensor_gps_Subscriber(ins, pmgr, 0);
-			}
+			},
+			"uorb.sensor_gps",
+			0
 		},
 	};
 };

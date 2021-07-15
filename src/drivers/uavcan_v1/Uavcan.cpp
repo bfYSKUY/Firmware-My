@@ -64,7 +64,7 @@ UavcanNode::UavcanNode(CanardInterface *interface, uint32_t node_id) :
 	uavcan_allocator = o1heapInit(_uavcan_heap, HeapSize, nullptr, nullptr);
 
 	if (uavcan_allocator == nullptr) {
-		PX4_ERR("o1heapInit failed with size %d", HeapSize);
+		PX4_ERR("o1heapInit failed with size %u", HeapSize);
 	}
 
 	_canard_instance = canardInit(&memAllocate, &memFree);
@@ -80,8 +80,6 @@ UavcanNode::UavcanNode(CanardInterface *interface, uint32_t node_id) :
 		_canard_instance.mtu_bytes = CANARD_MTU_CAN_CLASSIC;
 	}
 
-	PX4_INFO("main _canard_instance = %p", &_canard_instance);
-
 	_node_manager.subscribe();
 
 	for (auto &publisher : _publishers) {
@@ -95,8 +93,6 @@ UavcanNode::UavcanNode(CanardInterface *interface, uint32_t node_id) :
 
 UavcanNode::~UavcanNode()
 {
-	delete _can_interface;
-
 	if (_instance) {
 		/* tell the task we want it to go away */
 		_task_should_exit.store(true);
@@ -114,6 +110,8 @@ UavcanNode::~UavcanNode()
 
 		} while (_instance);
 	}
+
+	delete _can_interface;
 
 	perf_free(_cycle_perf);
 	perf_free(_interval_perf);
@@ -228,7 +226,7 @@ void UavcanNode::Run()
 			// It is possible to statically prove that an out-of-memory will never occur for a given application if
 			// the heap is sized correctly; for background, refer to the Robson's Proof and the documentation for O1Heap.
 			// Reception of an invalid frame is NOT an error.
-			PX4_ERR("Receive error %d\n", result);
+			PX4_ERR("Receive error %" PRId32" \n", result);
 
 		} else if (result == 1) {
 			// A transfer has been received, process it.
@@ -271,7 +269,9 @@ void UavcanNode::transmit()
 	for (const CanardFrame *txf = nullptr; (txf = canardTxPeek(&_canard_instance)) != nullptr;) {
 		// Attempt transmission only if the frame is not yet timed out while waiting in the TX queue.
 		// Otherwise just drop it and move on to the next one.
-		if (txf->timestamp_usec == 0 || txf->timestamp_usec > hrt_absolute_time()) {
+		const hrt_abstime now = hrt_absolute_time();
+
+		if (txf->timestamp_usec == 0 || txf->timestamp_usec > now) {
 			// Send the frame. Redundant interfaces may be used here.
 			const int tx_res = _can_interface->transmit(*txf);
 
@@ -294,6 +294,12 @@ void UavcanNode::transmit()
 				// Timeout - just exit and try again later
 				break;
 			}
+
+		} else if (txf->timestamp_usec <= now) {
+			// Transmission timed out -- remove from queue and deallocate its memory
+			canardTxPop(&_canard_instance);
+
+			_canard_instance.memory_free(&_canard_instance, (CanardFrame *)txf);
 		}
 	}
 }
@@ -356,7 +362,6 @@ void UavcanNode::print_info()
 	}
 
 	_mixing_output.printInfo();
-	_esc_controller.printInfo();
 
 	pthread_mutex_unlock(&_node_mutex);
 }
@@ -389,7 +394,7 @@ extern "C" __EXPORT int uavcan_v1_main(int argc, char *argv[])
 		param_get(param_find("UAVCAN_V1_ID"), &node_id);
 
 		// Start
-		PX4_INFO("Node ID %u, bitrate %u", node_id, bitrate);
+		PX4_INFO("Node ID %" PRIu32 ", bitrate %" PRIu32, node_id, bitrate);
 		return UavcanNode::start(node_id, bitrate);
 	}
 
@@ -444,7 +449,7 @@ void UavcanNode::sendHeartbeat()
 			// An error has occurred: either an argument is invalid or we've ran out of memory.
 			// It is possible to statically prove that an out-of-memory will never occur for a given application if the
 			// heap is sized correctly; for background, refer to the Robson's Proof and the documentation for O1Heap.
-			PX4_ERR("Heartbeat transmit error %d", result);
+			PX4_ERR("Heartbeat transmit error %" PRId32 "", result);
 		}
 
 		_uavcan_node_heartbeat_last = now;

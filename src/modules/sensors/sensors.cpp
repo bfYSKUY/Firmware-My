@@ -65,6 +65,7 @@
 #include <uORB/topics/airspeed.h>
 #include <uORB/topics/differential_pressure.h>
 #include <uORB/topics/parameter_update.h>
+#include <uORB/topics/sensor_baro.h>
 #include <uORB/topics/sensors_status_imu.h>
 #include <uORB/topics/vehicle_air_data.h>
 #include <uORB/topics/vehicle_control_mode.h>
@@ -665,7 +666,7 @@ void Sensors::Run()
 
 	// keep adding sensors as long as we are not armed,
 	// when not adding sensors poll for param updates
-	if (!_armed && hrt_elapsed_time(&_last_config_update) > 500_ms) {
+	if (!_armed && hrt_elapsed_time(&_last_config_update) > 1000_ms) {
 
 		const int n_accel = orb_group_count(ORB_ID(sensor_accel));
 		const int n_baro  = orb_group_count(ORB_ID(sensor_baro));
@@ -679,14 +680,17 @@ void Sensors::Run()
 			_n_gps = n_gps;
 			_n_gyro = n_gyro;
 			_n_mag = n_mag;
+
 			parameters_update();
 
-			_voted_sensors_update.initializeSensors();
 			InitializeVehicleAirData();
-			InitializeVehicleIMU();
 			InitializeVehicleGPSPosition();
 			InitializeVehicleMagnetometer();
 		}
+
+		// sensor device id (not just orb_group_count) must be populated before IMU init can succeed
+		_voted_sensors_update.initializeSensors();
+		InitializeVehicleIMU();
 
 		_last_config_update = hrt_absolute_time();
 
